@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GillNet AI — Backend Security & Code Quality Audit Report</title>
+<style>
+  @page {
+    size: A4;
+    margin: 14mm 12mm 14mm 12mm;
+    @bottom-right {
+      content: counter(page);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-size: 8pt;
+      color: #718096;
+    }
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #1a202c;
+    line-height: 1.45;
+    font-size: 9.5pt;
+    margin: 0;
+    padding: 0;
+    background-color: #ffffff;
+  }
+
+  h1, h2, h3, h4 {
+    color: #0f172a;
+    margin-top: 0;
+    font-weight: 700;
+  }
+
+  h1 {
+    font-size: 20pt;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+  }
+
+  h2 {
+    font-size: 13pt;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 5px;
+    margin-top: 18px;
+    margin-bottom: 10px;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  h3 {
+    font-size: 10.5pt;
+    margin-top: 12px;
+    margin-bottom: 4px;
+    color: #1e293b;
+  }
+
+  p {
+    margin-top: 0;
+    margin-bottom: 8px;
+  }
+
+  /* Header banner */
+  .header-card {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    color: #ffffff;
+    padding: 20px 24px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+  }
+
+  .header-card h1 {
+    color: #ffffff;
+  }
+
+  .header-subtitle {
+    font-size: 10pt;
+    color: #94a3b8;
+    margin-bottom: 12px;
+  }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    padding-top: 10px;
+    font-size: 8pt;
+  }
+
+  .meta-item strong {
+    display: block;
+    color: #38bdf8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 7pt;
+    margin-bottom: 2px;
+  }
+
+  /* Metric cards */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .kpi-card {
+    border-radius: 6px;
+    padding: 10px 14px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+  }
+
+  .kpi-card.critical {
+    border-left: 4px solid #ef4444;
+    background: #fef2f2;
+  }
+
+  .kpi-card.high {
+    border-left: 4px solid #f97316;
+    background: #fff7ed;
+  }
+
+  .kpi-card.medium {
+    border-left: 4px solid #eab308;
+    background: #fefce8;
+  }
+
+  .kpi-card.info {
+    border-left: 4px solid #3b82f6;
+    background: #eff6ff;
+  }
+
+  .kpi-number {
+    font-size: 18pt;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 3px;
+  }
+
+  .kpi-card.critical .kpi-number { color: #dc2626; }
+  .kpi-card.high .kpi-number { color: #ea580c; }
+  .kpi-card.medium .kpi-number { color: #ca8a04; }
+  .kpi-card.info .kpi-number { color: #2563eb; }
+
+  .kpi-label {
+    font-size: 7.5pt;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #475569;
+    letter-spacing: 0.03em;
+  }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 7pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    vertical-align: middle;
+  }
+
+  .badge-critical { background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+  .badge-high { background-color: #ffedd5; color: #9a3412; border: 1px solid #fdba74; }
+  .badge-medium { background-color: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+  .badge-low { background-color: #e0f2fe; color: #075985; border: 1px solid #7dd3fc; }
+  .badge-neutral { background-color: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 14px;
+    font-size: 8.5pt;
+  }
+
+  th, td {
+    padding: 6px 10px;
+    text-align: left;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  th {
+    background-color: #f1f5f9;
+    font-weight: 700;
+    color: #334155;
+    font-size: 8pt;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  tr:nth-child(even) td {
+    background-color: #f8fafc;
+  }
+
+  /* Finding Item Card */
+  .finding-box {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    background: #ffffff;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    overflow: hidden;
+  }
+
+  .finding-box.border-critical { border-left: 5px solid #dc2626; }
+  .finding-box.border-high { border-left: 5px solid #ea580c; }
+  .finding-box.border-medium { border-left: 5px solid #ca8a04; }
+
+  .finding-header {
+    background: #f8fafc;
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .finding-title {
+    font-size: 9.5pt;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .finding-body {
+    padding: 10px 12px;
+  }
+
+  .loc-bar {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 7.5pt;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 3px 6px;
+    border-radius: 3px;
+    display: inline-block;
+    margin-bottom: 6px;
+  }
+
+  /* Code Block */
+  pre {
+    background: #0f172a;
+    color: #e2e8f0;
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 7.5pt;
+    line-height: 1.35;
+    margin: 6px 0;
+    overflow-x: auto;
+  }
+
+  code {
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 8pt;
+    background-color: #f1f5f9;
+    padding: 1px 4px;
+    border-radius: 3px;
+    color: #0f172a;
+  }
+
+  pre code {
+    background-color: transparent;
+    padding: 0;
+    color: inherit;
+  }
+
+  .code-danger {
+    color: #f87171;
+    font-weight: 600;
+  }
+
+  .code-comment {
+    color: #94a3b8;
+    font-style: italic;
+  }
+
+  .remediation-box {
+    margin-top: 6px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 8.5pt;
+    color: #166534;
+  }
+
+  .remediation-box strong {
+    color: #15803d;
+  }
+
+  .page-break {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  .footer-note {
+    margin-top: 20px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 8px;
+    text-align: center;
+    font-size: 7.5pt;
+    color: #64748b;
+  }
+
+  ul {
+    margin: 4px 0 8px 16px;
+    padding: 0;
+  }
+
+  li {
+    margin-bottom: 3px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Header Card -->
+<div class="header-card">
+  <h1>GillNet AI — Backend Security & Code Audit</h1>
+  <div class="header-subtitle">Comprehensive Architectural, Security, and Code Quality Review</div>
+  <div class="meta-grid">
+    <div class="meta-item">
+      <strong>Target Codebase</strong>
+      GillNet-AI-main (Spring Boot & ML Service)
+    </div>
+    <div class="meta-item">
+      <strong>Audit Mode</strong>
+      Read-Only Static Analysis & Inspection
+    </div>
+    <div class="meta-item">
+      <strong>Scope</strong>
+      Auth, APIs, Java Backend, Python ML
+    </div>
+    <div class="meta-item">
+      <strong>Date / Status</strong>
+      September 2026 / Completed
+    </div>
+  </div>
+</div>
+
+<!-- Executive KPIs -->
+<div class="kpi-grid">
+  <div class="kpi-card critical">
+    <div class="kpi-number">3</div>
+    <div class="kpi-label">Critical Security Flaws</div>
+  </div>
+  <div class="kpi-card critical">
+    <div class="kpi-number">2</div>
+    <div class="kpi-label">Build / Test Failures</div>
+  </div>
+  <div class="kpi-card high">
+    <div class="kpi-number">6</div>
+    <div class="kpi-label">Missing Core Endpoints</div>
+  </div>
+  <div class="kpi-card medium">
+    <div class="kpi-number">5</div>
+    <div class="kpi-label">ML Service Bugs</div>
+  </div>
+</div>
+
+<h2>1. Executive Summary</h2>
+<p>
+  GillNet AI is intended to serve as a personal cybersecurity web suite providing phishing URL detection, scam message analysis, password strength evaluation, and an AI cybersecurity assistant. A thorough code audit of the repository reveals that the backend is currently in an early, incomplete state with <strong>severe security vulnerabilities</strong>, <strong>broken build tests</strong>, and <strong>zero implementation of core cybersecurity endpoints</strong>.
+</p>
+<p>
+  Most notably, user passwords are saved in <strong>unhashed plaintext</strong>, exposed via public endpoints, the Spring Boot test suite fails out-of-the-box due to mismatched package names, and the React frontend operates on disconnected client-side heuristics without any backend API communication.
+</p>
+
+<h2>2. Audit Findings Matrix</h2>
+<table>
+  <thead>
+    <tr>
+      <th style="width: 14%;">Severity</th>
+      <th style="width: 28%;">Issue Title</th>
+      <th style="width: 32%;">Location</th>
+      <th style="width: 26%;">Impact</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><span class="badge badge-critical">Critical</span></td>
+      <td>Plaintext Password Storage</td>
+      <td><code>UserService.java:20-31</code></td>
+      <td>CWE-256 / CWE-312: Unhashed DB credentials</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-critical">Critical</span></td>
+      <td>Public Credential Leak Endpoint</td>
+      <td><code>UserController.java:30-36</code></td>
+      <td>Unauthenticated password harvesting via GET API</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-critical">Critical</span></td>
+      <td>Password Leaked in Registration Response</td>
+      <td><code>UserController.java:20-28</code></td>
+      <td>Plaintext password returned to frontend client</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-critical">Critical</span></td>
+      <td>Test Suite Fails Out-of-the-Box</td>
+      <td><code>CybershieldAiApplicationTests.java</code></td>
+      <td>Package mismatch breaks <code>./mvnw test</code></td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-high">High</span></td>
+      <td>Missing Configuration Files</td>
+      <td><code>src/main/resources/</code> (Missing)</td>
+      <td>No DB connection string or port settings</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-high">High</span></td>
+      <td>Missing Core Cybersecurity APIs</td>
+      <td><code>com.gillnet.controller.*</code></td>
+      <td>No URL, message, password, or chat APIs</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-high">High</span></td>
+      <td>Path-Dependent Pickle Loading</td>
+      <td><code>ml-service/app.py:14-19</code></td>
+      <td>Crashes if run outside <code>ml-service/</code> dir</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-high">High</span></td>
+      <td>Valid URLs Rejected as Invalid</td>
+      <td><code>ml-service/app.py:281-289</code></td>
+      <td>Rejects URLs missing <code>http://</code> / <code>https://</code></td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-medium">Medium</span></td>
+      <td>Contradictory ML Response & Scoring</td>
+      <td><code>ml-service/app.py:348-371</code></td>
+      <td>Static risk score ignores model confidence</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-medium">Medium</span></td>
+      <td>Inaccurate Feature Extraction Logic</td>
+      <td><code>ml-service/app.py:94-143</code></td>
+      <td>Flawed <code>@</code>, subdomain, & redirect checks</td>
+    </tr>
+    <tr>
+      <td><span class="badge badge-medium">Medium</span></td>
+      <td>Missing Dataset <code>phishing.csv</code></td>
+      <td><code>ml-service/train_url_model.py:11</code></td>
+      <td>Model retraining script fails with FileNotFoundError</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="page-break"></div>
+
+<h2>3. Detailed Findings: Security Vulnerabilities (Critical)</h2>
+
+<!-- Finding 1 -->
+<div class="finding-box border-critical">
+  <div class="finding-header">
+    <div class="finding-title">
+      <span class="badge badge-critical">Critical</span>
+      Plaintext Password Storage & Absence of Hashing
+    </div>
+    <span class="badge badge-neutral">CWE-256 / CWE-312</span>
+  </div>
+  <div class="finding-body">
+    <div class="loc-bar">com.gillnet.service.UserService.java (Lines 20–31) | com.gillnet.model.User.java</div>
+    <p>
+      The <code>UserService.registerUser()</code> method directly persists the incoming <code>User</code> object without hashing the password. There is no <code>PasswordEncoder</code> configured anywhere in the Spring context.
+    </p>
+<pre><code><span class="code-comment">// UserService.java:20-31</span>
+public User registerUser(User user) {
+    Optional&lt;User&gt; existingUser = userRepository.findByEmail(user.getEmail());
+    if (existingUser.isPresent()) {
+        throw new RuntimeException("Email already registered");
+    }
+    user.setCreatedAt(LocalDateTime.now());
+    <span class="code-danger">return userRepository.save(user); // Raw password saved directly to MongoDB!</span>
+}</code></pre>
+    <div class="remediation-box">
+      <strong>Remediation:</strong> Inject a <code>BCryptPasswordEncoder</code> bean into <code>UserService</code> and hash passwords before persisting: <code>user.setPassword(passwordEncoder.encode(user.getPassword()));</code>.
+    </div>
+  </div>
+</div>
+
+<!-- Finding 2 -->
+<div class="finding-box border-critical">
+  <div class="finding-header">
+    <div class="finding-title">
+      <span class="badge badge-critical">Critical</span>
+      Public Credential & Password Exposure Endpoint
+    </div>
+    <span class="badge badge-neutral">CWE-200 / CWE-359</span>
+  </div>
+  <div class="finding-body">
+    <div class="loc-bar">com.gillnet.controller.UserController.java (Lines 30–36)</div>
+    <p>
+      The endpoint <code>GET /api/users/email/{email}</code> is publicly accessible without any authentication. It directly serializes the internal <code>User</code> MongoDB document into the HTTP response, transmitting the user's password in plain text over the network.
+    </p>
+<pre><code><span class="code-comment">// UserController.java:30-36</span>
+@GetMapping("/email/{email}")
+public ResponseEntity&lt;?&gt; getUserByEmail(@PathVariable String email) {
+    return userService.findByEmail(email)
+            <span class="code-danger">.map(ResponseEntity::ok) // DANGEROUS: Returns entire User object with password!</span>
+            .orElse(ResponseEntity.notFound().build());
+}</code></pre>
+    <div class="remediation-box">
+      <strong>Remediation:</strong> Immediately delete or restrict this endpoint. Never return raw entity models from controllers; use a sanitized <code>UserResponseDTO</code> containing only safe public attributes (id, name, email, createdAt).
+    </div>
+  </div>
+</div>
+
+<!-- Finding 3 -->
+<div class="finding-box border-critical">
+  <div class="finding-header">
+    <div class="finding-title">
+      <span class="badge badge-critical">Critical</span>
+      Registration Response Leaks Password
+    </div>
+    <span class="badge badge-neutral">CWE-200</span>
+  </div>
+  <div class="finding-body">
+    <div class="loc-bar">com.gillnet.controller.UserController.java (Lines 20–28)</div>
+    <p>
+      The <code>POST /api/users/register</code> endpoint returns <code>ResponseEntity.ok(savedUser)</code>, echoing back the user's plaintext password in the JSON body.
+    </p>
+<pre><code><span class="code-comment">// UserController.java:21-25</span>
+@PostMapping("/register")
+public ResponseEntity&lt;?&gt; registerUser(@RequestBody User user) {
+    User savedUser = userService.registerUser(user);
+    <span class="code-danger">return ResponseEntity.ok(savedUser); // Returns savedUser containing plaintext password</span>
+}</code></pre>
+    <div class="remediation-box">
+      <strong>Remediation:</strong> Annotate <code>password</code> in <code>User.java</code> with <code>@JsonProperty(access = JsonProperty.Access.WRITE_ONLY)</code> or return a specialized <code>UserResponseDTO</code>.
+    </div>
+  </div>
+</div>
+
+<!-- Finding 4 -->
+<div class="finding-box border-high">
+  <div class="finding-header">
+    <div class="finding-title">
+      <span class="badge badge-high">High</span>
+      Unprotected Endpoints & Flask Debug Mode on 0.0.0.0
+    </div>
+    <span class="badge badge-neutral">CWE-306 / CWE-489</span>
+  </div>
+  <div class="finding-body">
+    <div class="loc-bar">SecurityConfig.java (Lines 12–23) | ml-service/app.py (Lines 430–436)</div>
+    <ul>
+      <li><strong>Spring Security:</strong> <code>.authorizeHttpRequests(auth -&gt; auth.anyRequest().permitAll())</code> makes all endpoints public. No login or JWT token generation/validation exists.</li>
+      <li><strong>Flask ML Service:</strong> <code>app.run(host="0.0.0.0", port=5000, debug=True)</code> exposes the interactive Werkzeug debugger on all interfaces, enabling remote execution risks on shared networks.</li>
+    </ul>
+    <div class="remediation-box">
+      <strong>Remediation:</strong> Set <code>debug=False</code> in production/exhibition, restrict CORS, and implement a dedicated authentication controller.
+    </div>
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<h2>4. Detailed Findings: Build, Configuration & Architecture</h2>
+
+<!-- Finding 5 -->
+<div class="finding-box border-critical">
+  <div class="finding-header">
+    <div class="finding-title">
+      <span class="badge badge-critical">Critical</span>
+      Test Suite Fails Build Due to Package Mismatch
+    </div>
+    <span class="badge badge-neutral">Build Blocker</span>
+  </div>
+  <div class="finding-body">
+    <div class="loc-bar">src/test/java/com/cybershield/CybershieldAiApplicationTests.java</div>
+    <p>
+      The test suite was copied or retained from an older prototype named "CyberShield". The test class uses <code>package com.cybershield;</code>, while the main application class is under <code>package com.gillnet;</code>. Running <code>./mvnw test</code> crashes:
+    </p>
+<pre><code>[ERROR] Tests run: 1, Failures: 0, Errors: 1, Skipped: 0
+[ERROR] CybershieldAiApplicationTests -- Time elapsed: 0.701 s &lt;&lt;&lt; ERROR!
+java.lang.IllegalStateException: Unable to find a @SpringBootConfiguration by searching packages upwards from the test.</code></pre>
+    <div class="remediation-box">
+      <strong>Remediation:</strong> Move the test file to <code>src/test/java/com/gillnet/GillnetAiApplicationTests.java</code> and update the package declaration to <code>package com.gillnet;</code>.
+    </div>
+  </div>
+</div>
+
+<!-- Finding 6 -->
+<div class="finding-box border-high">
+  <div class="finding-header">
+    <div class="finding-title">
+      <span class="badge badge-high">High</span>
+      Missing <code>application.properties</code> & MongoDB Configuration
+    </div>
+    <span class="badge badge-neutral">Configuration</span>
+  </div>
+  <div class="finding-body">
+    <div class="loc-bar">GillNet-AI-main/src/main/resources/ (Directory Missing)</div>
+    <p>
+      There is no configuration file anywhere in the Spring Boot project. Spring Data MongoDB falls back to <code>mongodb://localhost:27017/test</code>. Without this file:
+    </p>
+    <ul>
+      <li>Connecting to MongoDB Atlas or custom databases fails.</li>
+      <li>Server port cannot be customized.</li>
+      <li>External ML service URL (<code>http://localhost:5000</code>) cannot be externalized or injected.</li>
+    </ul>
+    <div class="remediation-box">
+      <strong>Remediation:</strong> Create <code>src/main/resources/application.properties</code> with <code>spring.data.mongodb.uri</code>, <code>server.port</code>, and ML service URL.
+    </div>
+  </div>
+</div>
+
+<!-- Finding 7 -->
+<div class="finding-box border-high">
+  <div class="finding-header">
+    <div class="finding-title">
+      <span class="badge badge-high">High</span>
+      Complete Absence of Core Cybersecurity Endpoints
+    </div>
+    <span class="badge badge-neutral">Specification Gap</span>
+  </div>
+  <div class="finding-body">
+    <div class="loc-bar">PROJECT_CONTEXT.md Section 3 vs com.gillnet.controller.*</div>
+    <p>
+      According to the project requirements, Spring Boot is the central integration controller for all analysis tools. However, <strong>none</strong> of the following required endpoints exist:
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Required Specification</th>
+          <th>Expected Endpoint</th>
+          <th>Current Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Phishing URL Analyzer</td>
+          <td><code>POST /api/url/analyze</code></td>
+          <td><span class="badge badge-critical">Not Implemented</span></td>
+        </tr>
+        <tr>
+          <td>Scam Message Analyzer</td>
+          <td><code>POST /api/message/analyze</code></td>
+          <td><span class="badge badge-critical">Not Implemented</span></td>
+        </tr>
+        <tr>
+          <td>Password Strength Analyzer</td>
+          <td><code>POST /api/password/analyze</code></td>
+          <td><span class="badge badge-critical">Not Implemented</span></td>
+        </tr>
+        <tr>
+          <td>AI Security Assistant</td>
+          <td><code>POST /api/chat</code></td>
+          <td><span class="badge badge-critical">Not Implemented</span></td>
+        </tr>
+        <tr>
+          <td>Scan History API</td>
+          <td><code>GET /api/history</code></td>
+          <td><span class="badge badge-critical">Not Implemented</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="remediation-box">
+      <strong>Remediation:</strong> Implement the missing controllers and write a <code>UrlScanService</code> in Spring Boot using <code>RestClient</code> to call the Flask ML service on port 5000.
+    </div>
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<h2>5. Detailed Findings: Python ML Service Logic Bugs</h2>
+
+<!-- Finding 8 -->
+<div class="finding-box border-high">
+  <div class="finding-header">
+    <div class="finding-title">
+      <span class="badge badge-high">High</span>
+      Path-Dependent Model Loading Crashes Service
+    </div>
+    <span class="badge badge-neutral">Runtime Crash</span>
+  </div>
+  <div class="finding-body">
+    <div class="loc-bar">GillNet-AI-main/ml-service/app.py (Lines 14–19)</div>
+    <p>
+      <code>open("phishing_url_model.pkl", "rb")</code> relies on the current shell working directory. If executed from the project root (e.g. <code>python ml-service/app.py</code>), the service immediately crashes with <code>FileNotFoundError</code>.
+    </p>
+<pre><code><span class="code-comment"># Current flawed code:</span>
+with open("phishing_url_model.pkl", "rb") as f:
+    model = pickle.load(f)
+
+<span class="code-comment"># Corrected robust approach:</span>
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+with open(os.path.join(BASE_DIR, "phishing_url_model.pkl"), "rb") as f:
+    model = pickle.load(f)</code></pre>
+  </div>
+</div>
+
+<!-- Finding 9 -->
+<div class="finding-box border-high">
+  <div class="finding-header">
+    <div class="finding-title">
+      <span class="badge badge-high">High</span>
+      URL Validator Rejects Normal User Inputs
+    </div>
+    <span class="badge badge-neutral">Input Validation Flaw</span>
+  </div>
+  <div class="finding-body">
+    <div class="loc-bar">GillNet-AI-main/ml-service/app.py (Lines 281–289)</div>
+    <p>
+      The API validates URLs using <code>parsed = urlparse(url)</code> and tests <code>if not parsed.scheme or not parsed.netloc: return 400</code>. If a user pastes <code>paypal-secure.com</code> or <code>google.com</code> without typing <code>http://</code> or <code>https://</code>, <code>urlparse</code> sets <code>scheme=""</code> and <code>netloc=""</code>, causing the API to reject valid domains.
+    </p>
+    <div class="remediation-box">
+      <strong>Remediation:</strong> Automatically prepend <code>https://</code> if the input lacks a scheme before parsing: <code>if "://" not in url: url = "https://" + url</code>.
+    </div>
+  </div>
+</div>
+
+<!-- Finding 10 -->
+<div class="finding-box border-medium">
+  <div class="finding-header">
+    <div class="finding-title">
+      <span class="badge badge-medium">Medium</span>
+      Contradictory Prediction Output & Arbitrary Risk Score
+    </div>
+    <span class="badge badge-neutral">Logic Contradiction</span>
+  </div>
+  <div class="finding-body">
+    <div class="loc-bar">GillNet-AI-main/ml-service/app.py (Lines 348–371)</div>
+    <p>
+      1. If the ML model classifies a URL as <code>PHISHING</code>, but none of the 9 specific heuristic checks triggered, the service falls back to: <code>"reasons": ["No major suspicious URL characteristics detected"]</code>. This produces an API response telling the user the URL is Phishing while simultaneously stating no suspicious traits were found!
+    </p>
+    <p>
+      2. The risk score is hardcoded to static values (80, 55, or 15) and completely ignores <code>confidence</code> from <code>predict_proba</code>.
+    </p>
+<pre><code><span class="code-comment">// Actual contradictory API response example:</span>
+{
+  "prediction": "PHISHING",
+  "riskScore": 80,
+  "reasons": ["No major suspicious URL characteristics detected"],
+  "recommendation": "Do not open this website or enter personal information."
+}</code></pre>
+  </div>
+</div>
+
+<!-- Finding 11 -->
+<div class="finding-box border-medium">
+  <div class="finding-header">
+    <div class="finding-title">
+      <span class="badge badge-medium">Medium</span>
+      Heuristic Extraction False Positives
+    </div>
+    <span class="badge badge-neutral">Algorithm Inaccuracy</span>
+  </div>
+  <div class="finding-body">
+    <div class="loc-bar">GillNet-AI-main/ml-service/app.py (Lines 94–143)</div>
+    <ul>
+      <li><strong>Subdomain Check (L134–142):</strong> Counts dots in hostname. Legitimate domains with ccTLDs (e.g. <code>www.bbc.co.uk</code>) have 3 dots and are falsely penalized as phishing.</li>
+      <li><strong>At Symbol Check (L97–101):</strong> Checks <code>"@" in url</code> across query strings. Legitimate login URLs containing emails (e.g. <code>?email=user@domain.com</code>) are penalized.</li>
+      <li><strong>Double Slash Check (L108–118):</strong> Flags URLs where redirect parameters contain <code>https://</code>.</li>
+      <li><strong>Dead Code (L29–34):</strong> <code>SUSPICIOUS_KEYWORDS</code> is declared with 14 terms but never referenced anywhere.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<h2>6. Prioritized Remediation Roadmap</h2>
+
+<p>To prepare GillNet AI for a successful exhibition demo, follow this phased action plan:</p>
+
+<h3>Phase 1: Urgent Security & Build Fixes (Day 1)</h3>
+<ul>
+  <li>[ ] <strong>Fix Test Suite:</strong> Rename test package to <code>com.gillnet</code> in <code>src/test/java/com/gillnet/GillnetAiApplicationTests.java</code> to get green builds.</li>
+  <li>[ ] <strong>Password Hashing:</strong> Define <code>BCryptPasswordEncoder</code> in <code>SecurityConfig.java</code> and hash passwords in <code>UserService.registerUser()</code>.</li>
+  <li>[ ] <strong>Prevent Credential Leaks:</strong> Create a <code>UserResponseDTO</code> or annotate <code>password</code> with <code>@JsonProperty(access = WRITE_ONLY)</code>. Remove or restrict <code>/api/users/email/{email}</code>.</li>
+  <li>[ ] <strong>Add Configuration:</strong> Create <code>src/main/resources/application.properties</code> with MongoDB credentials and server port.</li>
+</ul>
+
+<h3>Phase 2: Core Cybersecurity REST Endpoints (Days 2–4)</h3>
+<ul>
+  <li>[ ] <strong>Implement URL Controller:</strong> Create <code>/api/url/analyze</code> in Spring Boot that delegates requests to <code>http://localhost:5000/api/v1/url/check</code> via <code>RestClient</code>.</li>
+  <li>[ ] <strong>Implement Message Analyzer:</strong> Create <code>/api/message/analyze</code> implementing heuristic scam rules on Spring Boot.</li>
+  <li>[ ] <strong>Implement Password Analyzer:</strong> Create <code>/api/password/analyze</code> checking entropy, character sets, and common passwords (ensuring submitted passwords are never logged or stored).</li>
+  <li>[ ] <strong>History Storage:</strong> Create a <code>ScanRecord</code> MongoDB document and <code>ScanHistoryRepository</code> to persist user scans.</li>
+</ul>
+
+<h3>Phase 3: Python ML Service Hardening (Day 5)</h3>
+<ul>
+  <li>[ ] <strong>Fix Path Loading:</strong> Use <code>os.path.dirname(__file__)</code> to resolve model file paths.</li>
+  <li>[ ] <strong>Prepend Schemes:</strong> Auto-prepend <code>https://</code> to user inputs before <code>urlparse</code>.</li>
+  <li>[ ] <strong>Dynamic Risk Score:</strong> Calculate <code>riskScore</code> dynamically using <code>confidence * 100</code>.</li>
+  <li>[ ] <strong>Resolve Reason Contradiction:</strong> Ensure fallback reason for phishing predictions states: <em>"Model identified structural phishing features."</em></li>
+</ul>
+
+<h3>Phase 4: Frontend-Backend Integration (Days 6–7)</h3>
+<ul>
+  <li>[ ] Replace mock heuristics in <code>Dashboard.tsx</code> with active <code>fetch()</code> calls to the Spring Boot REST API.</li>
+  <li>[ ] Add error banners and loading spinners for live API analysis.</li>
+</ul>
+
+<div class="footer-note">
+  GillNet AI Project Exhibition — Technical Architecture & Security Audit Report &bull; Generated September 2026
+</div>
+
+</body>
+</html>
