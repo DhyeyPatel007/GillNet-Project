@@ -32,6 +32,7 @@ import {
   HelpCircle,
   Copy,
   Check,
+  ArrowUpRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import globeImage from "@/assets/security-globe.png";
@@ -283,7 +284,7 @@ function DashboardPage() {
     }
   };
 
-  const displayName = user?.name || (user?.email ? user.email.split("@")[0] : "Security Analyst");
+  const displayName = user?.name || (user?.email ? user.email.split("@")[0] : "Analyst");
   const userInitial = displayName.charAt(0).toUpperCase();
 
   const navItems = [
@@ -981,6 +982,38 @@ function DashboardPage() {
                         <pre className="max-h-28 overflow-y-auto whitespace-pre-wrap rounded-lg border border-frame/30 bg-surface/80 p-2 font-mono text-[11px] text-bright leading-relaxed">
                           {phishingResult.extractedText}
                         </pre>
+                      </div>
+                    )}
+
+                    {/* Extracted Embedded URLs Section */}
+                    {phishingResult.extractedUrls && phishingResult.extractedUrls.length > 0 && (
+                      <div className="space-y-1.5 rounded-xl border border-frame/40 bg-background/40 p-2.5 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-bright flex items-center gap-1.5">
+                            <Link2 className="size-3.5 text-primary" /> Embedded Hyperlink Inspection ({phishingResult.extractedUrls.length} found):
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-mono">
+                            Decisive threat factor
+                          </span>
+                        </div>
+                        <div className="space-y-1 mt-1">
+                          {phishingResult.extractedUrls.map((url, i) => (
+                            <div key={i} className="flex items-center justify-between gap-2 rounded-lg bg-surface/70 px-2.5 py-1.5 border border-frame/30">
+                              <span className="font-mono text-[11px] text-bright truncate max-w-[420px]">{url}</span>
+                              <button
+                                onClick={() => {
+                                  setScanInput(url);
+                                  handleLinkScan(url);
+                                  const el = document.getElementById("scan");
+                                  if (el) el.scrollIntoView({ behavior: "smooth" });
+                                }}
+                                className="text-[10px] text-primary hover:underline shrink-0 flex items-center gap-1 cursor-pointer font-medium"
+                              >
+                                Deep Inspect <ArrowUpRight className="size-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
 

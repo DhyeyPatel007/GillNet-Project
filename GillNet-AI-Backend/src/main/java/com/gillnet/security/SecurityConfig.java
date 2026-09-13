@@ -37,6 +37,7 @@ public class SecurityConfig {
                     "/api/chat/**",
                     "/api/phishing/**",
                     "/api/history/**",
+                    "/api/model/**",
                     "/health",
                     "/error"
                 ).permitAll()
@@ -55,6 +56,10 @@ public class SecurityConfig {
             "http://localhost:*",
             "http://127.0.0.1:*",
             "https://localhost:*",
+            "https://*.vercel.app",
+            "https://vercel.app",
+            "https://*.vercel.sh",
+            "https://*.now.sh",
             "*"
         ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"));

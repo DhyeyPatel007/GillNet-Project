@@ -230,11 +230,12 @@ public class PhishingScanService {
         boolean credentialHarvesting = false;
         boolean senderSpoofed = false;
 
-        // 1. Extract embedded URLs
-        Pattern urlPattern = Pattern.compile("(?i)\\b((?:https?://|www\\d{0,3}[.]|[a-z0-9.\\-]+[.][a-z]{2,4}/)(?:[^\\s()<>]+|\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\))+(?:\\(([^\\s()<>]+|(\\([^\\s()<>]+\\)))*\\)|[^\\s`!()\\[\\]{};:'\".,<>?«»“”‘’]))");
-        Matcher matcher = urlPattern.matcher(text);
+        // 1. Extract embedded URLs (supports http/https, hxxp, www, defanged [.], and bare domains with common/suspicious TLDs)
+        String normalizedForUrls = text.replaceAll("(?i)hxxp", "http").replace("[.]", ".");
+        Pattern urlPattern = Pattern.compile("(?i)\\b((?:https?://|www\\d{0,3}[.]|[a-z0-9.\\-]+[.](?:com|org|net|xyz|top|ru|co|info|biz|site|live|online|security|app|vip|club)/?)[^\\s<>'\"\\)\\]]+)");
+        Matcher matcher = urlPattern.matcher(normalizedForUrls);
         while (matcher.find()) {
-            String url = matcher.group();
+            String url = matcher.group().replaceAll("[.,;]+$", "");
             if (!extractedUrls.contains(url)) {
                 extractedUrls.add(url);
             }
@@ -249,7 +250,7 @@ public class PhishingScanService {
                 if ("PHISHING".equalsIgnoreCase(urlResp.getPrediction()) || urlResp.getRiskScore() >= 60) {
                     maliciousUrlCount++;
                     indicators.add("[Embedded Destination Threat] Malicious Hyperlink: Destination '" + url + "' classified as PHISHING (Risk: " + urlResp.getRiskScore() + "/100).");
-                    riskScore += 35;
+                    riskScore = Math.max(riskScore + 40, 90);
                 } else {
                     indicators.add("[Embedded Destination Inspection] Hyperlink Verified: Destination '" + url + "' analyzed as " + urlResp.getPrediction() + ".");
                 }
@@ -323,7 +324,16 @@ public class PhishingScanService {
         String summary;
         double confidence;
 
-        if (riskScore >= 70 || senderSpoofed || maliciousUrlCount > 0 || (credentialHarvesting && !urgencyTactics.isEmpty())) {
+        if (maliciousUrlCount > 0) {
+            threatLevel = "PHISHING";
+            riskScore = Math.max(riskScore, 90);
+            confidence = 99.2;
+            summary = "Critical Phishing Threat Identified (Target: " + detectedBrand + "). Communication embeds " + maliciousUrlCount + " malicious hyperlink(s) leading to deceptive phishing infrastructure.";
+            recommendations.add("CRITICAL: Do NOT click any links, open buttons, or visit URLs in this message.");
+            recommendations.add("Never submit login passwords, MFA/OTP tokens, or financial information to unverified links.");
+            recommendations.add("Verify out-of-band: Open a fresh browser window and navigate directly to the verified official portal.");
+            recommendations.add("Report this message immediately to your organization's IT Security / SOC department as Phishing.");
+        } else if (riskScore >= 70 || senderSpoofed || (credentialHarvesting && !urgencyTactics.isEmpty())) {
             threatLevel = "PHISHING";
             confidence = 98.2;
             summary = "High-Severity Phishing Attack Identified (Target: " + detectedBrand + "). Adversary leverages psychological urgency, unauthenticated dispatch relays, and deceptive credential harvesting lures.";

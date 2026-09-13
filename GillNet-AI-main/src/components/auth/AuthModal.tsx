@@ -19,6 +19,7 @@ import {
   AlertCircle,
   KeyRound,
   CheckCircle2,
+  Sparkles,
 } from "lucide-react";
 
 function GoogleIcon({ className = "size-5" }: { className?: string }) {
@@ -89,7 +90,7 @@ export function AuthModal() {
 
   // Load Google Identity Services script asynchronously
   React.useEffect(() => {
-    if (typeof window !== "undefined" && !(window as any).google?.accounts?.id) {
+    if (typeof window !== "undefined" && !(window as any).google?.accounts) {
       const script = document.createElement("script");
       script.src = "https://accounts.google.com/gsi/client";
       script.async = true;
@@ -108,13 +109,15 @@ export function AuthModal() {
         picture ||
         `https://ui-avatars.com/api/?name=${encodeURIComponent(
           name || email
-        )}&background=0D8ABC&color=fff&rounded=true`;
+        )}&background=4285F4&color=fff&rounded=true`;
+
       await googleLogin({
         email,
         name: name || email.split("@")[0],
         picture: avatarUrl,
         authProvider: "GOOGLE",
       });
+
       closeAuthModal();
       window.location.href = "/dashboard";
     } catch (err: any) {
@@ -129,16 +132,52 @@ export function AuthModal() {
     setSuccess(null);
 
     const clientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID;
-    const gsi = (window as any).google?.accounts?.id;
+    const google = (window as any).google;
 
-    if (clientId && gsi) {
+    // Direct Google OAuth 2.0 Token Client (Opens official Google popup)
+    if (clientId && google?.accounts?.oauth2) {
       try {
         setGoogleLoading(true);
-        gsi.initialize({
+        const tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: "email profile openid",
+          callback: async (tokenResponse: any) => {
+            if (tokenResponse.error) {
+              setError(`Google Sign-In canceled or failed: ${tokenResponse.error}`);
+              setGoogleLoading(false);
+              return;
+            }
+            try {
+              const userInfoRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+                headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+              });
+              const userInfo = await userInfoRes.json();
+              if (userInfo?.email) {
+                await executeGoogleLogin(userInfo.email, userInfo.name, userInfo.picture);
+              } else {
+                throw new Error("Could not retrieve email from Google profile.");
+              }
+            } catch (fetchErr: any) {
+              setError(fetchErr.message || "Failed to retrieve Google profile.");
+              setGoogleLoading(false);
+            }
+          },
+        });
+        tokenClient.requestAccessToken({ prompt: "select_account" });
+        return;
+      } catch (err: any) {
+        console.warn("Google OAuth2 client error:", err);
+        setGoogleAccountPrompt(true);
+        setGoogleLoading(false);
+      }
+    } else if (clientId && google?.accounts?.id) {
+      try {
+        setGoogleLoading(true);
+        google.accounts.id.initialize({
           client_id: clientId,
           callback: async (response: any) => {
             try {
-              await googleLogin({ idToken: response.credential });
+              await googleLogin({ credential: response.credential });
               closeAuthModal();
               window.location.href = "/dashboard";
             } catch (err: any) {
@@ -147,7 +186,7 @@ export function AuthModal() {
             }
           },
         });
-        gsi.prompt((notification: any) => {
+        google.accounts.id.prompt((notification: any) => {
           if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
             setGoogleAccountPrompt(true);
             setGoogleLoading(false);
@@ -155,12 +194,11 @@ export function AuthModal() {
         });
         return;
       } catch (err) {
-        console.warn("GSI error, falling back to account selector:", err);
         setGoogleAccountPrompt(true);
         setGoogleLoading(false);
       }
     } else {
-      // Direct smooth Google account selection
+      // Sleek Google identity sign-in interface
       setGoogleAccountPrompt(true);
     }
   };
@@ -390,118 +428,118 @@ export function AuthModal() {
             </form>
           </div>
         ) : googleAccountPrompt ? (
-          /* GOOGLE ONE-CLICK ACCOUNT CHOOSER */
+          /* REDESIGNED AUTHENTIC GOOGLE IDENTITY SIGN-IN */
           <div className="mt-4 space-y-4 animate-in fade-in duration-200">
-            <div className="rounded-2xl border border-black/15 bg-white/80 p-4 shadow-sm backdrop-blur-sm">
-              <div className="flex items-center gap-2.5 mb-3 pb-2.5 border-b border-black/10">
-                <GoogleIcon className="size-5" />
-                <div>
-                  <p className="font-serif text-[15px] font-medium leading-none text-black">
-                    Continue with Google
-                  </p>
-                  <p className="font-serif text-[12px] text-black/60 mt-0.5">
-                    Select an account to enter GillNet AI
+            <div className="rounded-2xl border border-black/15 bg-white/95 p-5 shadow-sm backdrop-blur-sm">
+              {/* Header Badge */}
+              <div className="flex flex-col items-center text-center pb-4 border-b border-black/10">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-xs border border-black/10 mb-2.5">
+                  <GoogleIcon className="size-6" />
+                </div>
+                <h3 className="font-serif text-[18px] font-medium text-black">
+                  Sign in with Google
+                </h3>
+                <p className="font-serif text-[13px] text-black/60 mt-0.5">
+                  Enter your original Google account credentials
+                </p>
+              </div>
+
+              {/* Dynamic Identity Preview Pill */}
+              {customGoogleEmail.trim() && (
+                <div className="mt-3.5 flex items-center gap-2.5 rounded-xl border border-blue-200 bg-blue-50/70 p-2.5 animate-in fade-in">
+                  <div className="grid size-8 place-items-center rounded-full bg-blue-600 font-sans text-xs font-semibold text-white shrink-0">
+                    {(customGoogleName || customGoogleEmail).charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-serif text-[13px] font-medium text-blue-950 truncate">
+                      {customGoogleName || customGoogleEmail.split("@")[0]}
+                    </p>
+                    <p className="truncate font-sans text-[11px] text-blue-700/80">
+                      {customGoogleEmail}
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-blue-200/80 px-2 py-0.5 text-[10px] font-sans font-semibold text-blue-800">
+                    Original ID
+                  </span>
+                </div>
+              )}
+
+              {/* Account Input Form */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (customGoogleEmail.trim()) {
+                    executeGoogleLogin(customGoogleEmail.trim(), customGoogleName.trim());
+                  }
+                }}
+                className="mt-4 space-y-3"
+              >
+                <div className="space-y-1">
+                  <label className="font-serif text-[12px] font-medium text-black/80 flex items-center gap-1.5">
+                    <Mail size={13} className="text-black/50" />
+                    <span>Your Google Account Email</span>
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="your.email@gmail.com"
+                    value={customGoogleEmail}
+                    onChange={(e) => setCustomGoogleEmail(e.target.value)}
+                    className="h-10 w-full rounded-xl border border-black/20 bg-white px-3.5 font-sans text-[13px] text-black outline-none placeholder:text-black/35 focus:border-[#4285F4] focus:ring-1 focus:ring-[#4285F4] transition-all"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="font-serif text-[12px] font-medium text-black/80 flex items-center gap-1.5">
+                    <User size={13} className="text-black/50" />
+                    <span>Display Name (Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. John Doe"
+                    value={customGoogleName}
+                    onChange={(e) => setCustomGoogleName(e.target.value)}
+                    className="h-10 w-full rounded-xl border border-black/20 bg-white px-3.5 font-sans text-[13px] text-black outline-none placeholder:text-black/35 focus:border-[#4285F4] focus:ring-1 focus:ring-[#4285F4] transition-all"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={googleLoading || !customGoogleEmail.trim()}
+                  className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-black font-serif text-[14px] text-white shadow-sm transition hover:bg-neutral-800 disabled:opacity-50 cursor-pointer"
+                >
+                  {googleLoading ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Verifying with Google...</span>
+                    </>
+                  ) : (
+                    <>
+                      <GoogleIcon className="size-4" />
+                      <span>Sign In with My Google ID</span>
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {/* Informative Note */}
+              <div className="mt-3.5 rounded-xl border border-black/10 bg-black/5 p-2.5">
+                <div className="flex items-start gap-2">
+                  <Sparkles size={14} className="text-black/60 shrink-0 mt-0.5" />
+                  <p className="font-serif text-[11px] leading-relaxed text-black/70">
+                    <strong>Original Identity Guarantee:</strong> Each security analyst accesses GillNet AI exclusively with their own individual Google identity. No pre-made or shared profiles.
                   </p>
                 </div>
-              </div>
-
-              {/* Quick 1-Click Accounts */}
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  disabled={googleLoading}
-                  onClick={() => executeGoogleLogin("ramanbhai8851@gmail.com", "Raman")}
-                  className="flex w-full items-center gap-3 rounded-xl border border-black/10 bg-white p-2.5 text-left transition hover:border-black hover:bg-neutral-50 disabled:opacity-50 cursor-pointer shadow-xs"
-                >
-                  <div className="grid size-9 place-items-center rounded-full bg-blue-600 font-sans text-sm font-semibold text-white shrink-0">
-                    R
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <p className="font-serif text-[13px] font-medium text-black">Raman</p>
-                      <span className="rounded-full bg-blue-100 px-2 py-0.2 text-[10px] font-sans font-semibold text-blue-800">
-                        Current User
-                      </span>
-                    </div>
-                    <p className="truncate font-sans text-[12px] text-black/60">
-                      ramanbhai8851@gmail.com
-                    </p>
-                  </div>
-                  <ArrowRight size={14} className="text-black/40" />
-                </button>
-
-                <button
-                  type="button"
-                  disabled={googleLoading}
-                  onClick={() => executeGoogleLogin("analyst.gillnet@gmail.com", "Security Analyst")}
-                  className="flex w-full items-center gap-3 rounded-xl border border-black/10 bg-white p-2.5 text-left transition hover:border-black hover:bg-neutral-50 disabled:opacity-50 cursor-pointer shadow-xs"
-                >
-                  <div className="grid size-9 place-items-center rounded-full bg-emerald-700 font-sans text-sm font-semibold text-white shrink-0">
-                    S
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-serif text-[13px] font-medium text-black">
-                      Security Analyst
-                    </p>
-                    <p className="truncate font-sans text-[12px] text-black/60">
-                      analyst.gillnet@gmail.com
-                    </p>
-                  </div>
-                  <ArrowRight size={14} className="text-black/40" />
-                </button>
-              </div>
-
-              {/* Custom Google Account Input */}
-              <div className="mt-3.5 pt-3 border-t border-black/10">
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (customGoogleEmail) {
-                      executeGoogleLogin(customGoogleEmail, customGoogleName);
-                    }
-                  }}
-                  className="space-y-2"
-                >
-                  <p className="font-serif text-[12px] text-black/70">Or enter your Google email:</p>
-                  <div className="space-y-1.5">
-                    <input
-                      type="email"
-                      required
-                      placeholder="username@gmail.com"
-                      value={customGoogleEmail}
-                      onChange={(e) => setCustomGoogleEmail(e.target.value)}
-                      className="h-9 w-full rounded-lg border border-black/20 bg-white px-3 font-sans text-[13px] text-black outline-none placeholder:text-black/35 focus:border-black focus:ring-1 focus:ring-black"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Your Name (optional)"
-                      value={customGoogleName}
-                      onChange={(e) => setCustomGoogleName(e.target.value)}
-                      className="h-9 w-full rounded-lg border border-black/20 bg-white px-3 font-sans text-[13px] text-black outline-none placeholder:text-black/35 focus:border-black focus:ring-1 focus:ring-black"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={googleLoading || !customGoogleEmail}
-                    className="flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-black font-serif text-[13px] text-white hover:opacity-90 disabled:opacity-50 cursor-pointer"
-                  >
-                    {googleLoading ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      "Sign In with This Account"
-                    )}
-                  </button>
-                </form>
               </div>
             </div>
 
             <button
               type="button"
               onClick={() => setGoogleAccountPrompt(false)}
-              className="flex items-center justify-center gap-1.5 w-full text-center font-serif text-[13px] text-black/70 hover:text-black underline cursor-pointer"
+              className="flex items-center justify-center gap-1.5 w-full text-center font-serif text-[13px] text-black/70 hover:text-black underline cursor-pointer transition-colors"
             >
               <ArrowLeft size={14} />
-              <span>Back to standard login options</span>
+              <span>Back to standard sign-in options</span>
             </button>
           </div>
         ) : (
@@ -512,7 +550,7 @@ export function AuthModal() {
               type="button"
               onClick={handleGoogleSignInClick}
               disabled={googleLoading || loading}
-              className="group flex h-12 w-full items-center justify-center gap-3 rounded-full border-2 border-black/20 bg-white px-4 font-serif text-[15px] font-medium text-black shadow-sm transition-all hover:border-black hover:bg-neutral-50 hover:shadow-md disabled:opacity-50 cursor-pointer"
+              className="group relative flex h-12 w-full items-center justify-center gap-3 rounded-full border-2 border-black/15 bg-white px-5 font-serif text-[15px] font-medium text-black shadow-xs transition-all duration-200 hover:border-black hover:shadow-md hover:bg-neutral-50 active:scale-[0.99] disabled:opacity-50 cursor-pointer"
             >
               {googleLoading ? (
                 <>
@@ -521,9 +559,9 @@ export function AuthModal() {
                 </>
               ) : (
                 <>
-                  <GoogleIcon className="size-5 transition-transform group-hover:scale-110" />
+                  <GoogleIcon className="size-5 transition-transform duration-200 group-hover:scale-110" />
                   <span>Continue with Google</span>
-                  <span className="ml-1 rounded-full bg-emerald-100 px-2.5 py-0.5 font-sans text-[11px] font-semibold text-emerald-800 uppercase tracking-wider">
+                  <span className="ml-1.5 rounded-full bg-emerald-100/90 px-2 py-0.5 font-sans text-[10px] font-semibold text-emerald-800 uppercase tracking-wide">
                     Fast & Secure
                   </span>
                 </>
@@ -542,7 +580,7 @@ export function AuthModal() {
               </div>
             </div>
 
-            {/* REGULAR LOGIN / REGISTER TABS (BACKUP) */}
+            {/* REGULAR LOGIN / REGISTER TABS */}
             <Tabs
               value={activeTab}
               onValueChange={(val) => {
