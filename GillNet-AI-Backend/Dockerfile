@@ -22,26 +22,18 @@ RUN mvn clean package -DskipTests -B
 # =============================================================================
 FROM eclipse-temurin:21-jre-jammy
 
-# Create non-root system user and prepare /app directory with proper ownership
-RUN groupadd -r gillnet && \
-    useradd -r -g gillnet -m -d /home/gillnet -s /bin/bash gillnet && \
-    mkdir -p /app && \
-    chown -R gillnet:gillnet /app
-
 WORKDIR /app
 
 # Copy the executable Spring Boot fat JAR from the builder stage
-COPY --from=builder --chown=gillnet:gillnet /build/target/*.jar /app/app.jar
+COPY --from=builder /build/target/*.jar /app/app.jar
 
-# Switch to non-root user
-USER gillnet
-
-# Default port configuration (Render dynamically sets $PORT in runtime)
+# JVM automatically picks up JAVA_TOOL_OPTIONS without needing shell expansion
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom"
 ENV PORT=8081
-ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom"
 
 # Document listening port
 EXPOSE 8081
 
-# Launch Spring Boot with exec so Java replaces shell as PID 1
-ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -Dserver.port=${PORT:-8081} -jar app.jar \"$@\"", "--"]
+# Direct exec form: Java becomes true PID 1, clears inherited base CMD, zero shell overhead
+ENTRYPOINT ["java", "-jar", "app.jar"]
+CMD []
