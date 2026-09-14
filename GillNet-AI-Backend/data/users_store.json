@@ -1,41 +1,70 @@
-[ {
-  "id" : "usr-alex-001",
-  "name" : "Alex Rivera",
-  "email" : "alex@gillnet.ai",
-  "password" : "$2a$10$EOSj.wMBYbk0AUi4UFbaluKUIHBiwMqAWxMhw3vcNTb2N7UHDUEya",
-  "picture" : null,
-  "authProvider" : null,
-  "createdAt" : [ 2026, 9, 12, 12, 44, 22, 469307300 ]
-}, {
-  "id" : "15d88a9c-5883-4881-b09b-1004ee273691",
-  "name" : "Snehil Sahay",
-  "email" : "strange.snehil22@gmail.com",
-  "password" : "$2a$10$s7e3uWrb8iOkEGeVpQaKVerBaSmUfA9.5tjecGBs5PfmVc2M3955y",
-  "picture" : "https://ui-avatars.com/api/?name=Snehil%20Sahay&background=0D8ABC&color=fff&rounded=true",
-  "authProvider" : "GOOGLE",
-  "createdAt" : [ 2026, 9, 12, 23, 49, 9, 756443700 ]
-}, {
-  "id" : "9b774633-6466-45f9-a480-7117dd90f556",
-  "name" : "Test User",
-  "email" : "testuser@example.com",
-  "password" : "$2a$10$oZZaCNXd1y4Mfz1sV35dH.ozsTZrcYpJM1P3V1dJsKlMeQvwNyBE.",
-  "picture" : null,
-  "authProvider" : null,
-  "createdAt" : [ 2026, 9, 12, 23, 37, 18, 217271600 ]
-}, {
-  "id" : "bc3a0584-1b4b-410b-bfa9-abed86842160",
-  "name" : "Returning Tester",
-  "email" : "returner@gillnet.ai",
-  "password" : "$2a$10$NMpeeGa782Cu.jZWHO0GX.fWDQmp8O5hl6CyuVZOIleXl0TUD8i/.",
-  "picture" : null,
-  "authProvider" : null,
-  "createdAt" : [ 2026, 9, 12, 12, 47, 26, 361696300 ]
-}, {
-  "id" : "a221b4f1-5651-447e-9fc8-4be9d718c640",
-  "name" : "Raman",
-  "email" : "ramanbhai8851@gmail.com",
-  "password" : "$2a$10$WjJsIpE0xGudJ1jVFju.C.Nxdhkl0xJprFKs.5p6F4WA12gMOZGbu",
-  "picture" : "https://ui-avatars.com/api/?name=Raman&background=0D8ABC&color=fff&rounded=true",
-  "authProvider" : "GOOGLE",
-  "createdAt" : [ 2026, 9, 12, 12, 49, 46, 282119500 ]
-} ]
+[
+  {
+    "id": "usr-alex-001",
+    "name": "Alex Rivera",
+    "email": "alex@gillnet.ai",
+    "password": "$2a$10$EOSj.wMBYbk0AUi4UFbaluKUIHBiwMqAWxMhw3vcNTb2N7UHDUEya",
+    "picture": null,
+    "authProvider": null,
+    "createdAt": [
+      2026,
+      9,
+      12,
+      12,
+      44,
+      22,
+      469307300
+    ]
+  },
+  {
+    "id": "9b774633-6466-45f9-a480-7117dd90f556",
+    "name": "Test User",
+    "email": "testuser@example.com",
+    "password": "$2a$10$oZZaCNXd1y4Mfz1sV35dH.ozsTZrcYpJM1P3V1dJsKlMeQvwNyBE.",
+    "picture": null,
+    "authProvider": null,
+    "createdAt": [
+      2026,
+      9,
+      12,
+      23,
+      37,
+      18,
+      217271600
+    ]
+  },
+  {
+    "id": "bc3a0584-1b4b-410b-bfa9-abed86842160",
+    "name": "Returning Tester",
+    "email": "returner@gillnet.ai",
+    "password": "$2a$10$NMpeeGa782Cu.jZWHO0GX.fWDQmp8O5hl6CyuVZOIleXl0TUD8i/.",
+    "picture": null,
+    "authProvider": null,
+    "createdAt": [
+      2026,
+      9,
+      12,
+      12,
+      47,
+      26,
+      361696300
+    ]
+  },
+  {
+    "id": "a221b4f1-5651-447e-9fc8-4be9d718c640",
+    "name": "Raman",
+    "email": "ramanbhai8851@gmail.com",
+    "password": "$2a$10$WjJsIpE0xGudJ1jVFju.C.Nxdhkl0xJprFKs.5p6F4WA12gMOZGbu",
+    "picture": "https://ui-avatars.com/api/?name=Raman&background=0D8ABC&color=fff&rounded=true",
+    "authProvider": "GOOGLE",
+    "createdAt": [
+      2026,
+      9,
+      12,
+      12,
+      49,
+      46,
+      282119500
+    ]
+  }
+]

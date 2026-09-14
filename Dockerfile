@@ -5,14 +5,14 @@ FROM maven:3.9-eclipse-temurin-21 AS builder
 
 WORKDIR /build
 
-# Copy pom.xml first to maximize Docker layer caching
-COPY pom.xml .
+# Copy backend pom.xml first to maximize Docker layer caching
+COPY GillNet-AI-Backend/pom.xml .
 
 # Download dependencies in an isolated layer
 RUN mvn dependency:go-offline -B || true
 
-# Copy project source code
-COPY src ./src
+# Copy backend source code
+COPY GillNet-AI-Backend/src ./src
 
 # Build production Spring Boot executable JAR without running test suites
 RUN mvn clean package -DskipTests -B
@@ -28,15 +28,15 @@ WORKDIR /app
 RUN ln -sf /opt/java/openjdk/bin/java /usr/bin/java && \
     ln -sf /opt/java/openjdk/bin/java /usr/local/bin/java
 
-# Copy the executable Spring Boot fat JAR explicitly by filename
+# Copy the executable Spring Boot fat JAR from builder stage
 COPY --from=builder /build/target/gillnet-ai-0.0.1-SNAPSHOT.jar /app/app.jar
 RUN cp /app/app.jar /app.jar
 
 # Copy initial data store
-COPY data ./data
+COPY GillNet-AI-Backend/data ./data
 
 # Copy entrypoint startup script
-COPY entrypoint.sh /app/entrypoint.sh
+COPY GillNet-AI-Backend/entrypoint.sh /app/entrypoint.sh
 
 # Ensure Unix LF line endings and executable permission
 RUN sed -i 's/\r$//' /app/entrypoint.sh && \

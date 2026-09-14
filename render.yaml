@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: gillnet-ai-backend
+    runtime: docker
+    dockerfilePath: ./GillNet-AI-Backend/Dockerfile
+    dockerContext: ./GillNet-AI-Backend
+    plan: free
+    envVars:
+      - key: PORT
+        value: 8081
