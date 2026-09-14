@@ -31,5 +31,4 @@ build/
 
 ### VS Code ###
 .vscode/
-### Secrets ###
-src/main/resources/application.properties
+# src/main/resources/application.properties (tracked since credentials use environment variables)

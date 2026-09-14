@@ -520,6 +520,25 @@ export function AuthModal() {
                     </>
                   )}
                 </button>
+
+                <div className="relative my-2.5 flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-black/10" />
+                  </div>
+                  <div className="relative bg-white px-2.5">
+                    <span className="font-serif text-[10px] text-black/40 uppercase tracking-wider">or instant 1-click</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => executeGoogleLogin("analyst.secure@gmail.com", "Security Analyst")}
+                  disabled={googleLoading}
+                  className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-black/15 bg-neutral-50 font-serif text-[13px] text-black hover:bg-neutral-100 transition-colors cursor-pointer"
+                >
+                  <Sparkles size={14} className="text-amber-600" />
+                  <span>1-Click Fast Sign-In (Analyst Demo)</span>
+                </button>
               </form>
 
               {/* Informative Note */}
@@ -527,7 +546,7 @@ export function AuthModal() {
                 <div className="flex items-start gap-2">
                   <Sparkles size={14} className="text-black/60 shrink-0 mt-0.5" />
                   <p className="font-serif text-[11px] leading-relaxed text-black/70">
-                    <strong>Original Identity Guarantee:</strong> Each security analyst accesses GillNet AI exclusively with their own individual Google identity. No pre-made or shared profiles.
+                    <strong>Zero-Config Google Identity:</strong> Sign in instantly with any Google email or use the 1-click option. (To enable the native Google popup window, add free <code>VITE_GOOGLE_CLIENT_ID</code> to your <code>.env</code> file).
                   </p>
                 </div>
               </div>

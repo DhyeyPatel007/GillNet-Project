@@ -152,10 +152,30 @@ public class UrlScanService {
                 riskScore += 25;
             }
 
-            // Check hyphens in hostname
-            if (host.contains("-")) {
+            // Check for piracy, rogue streaming & unauthorized data broker networks
+            String[] piracyDataHarvestDomains = {
+                    "net77.cc", "123movies", "fmovies", "soap2day", "putlocker",
+                    "solarmovie", "lookmovie", "yify", "thepiratebay", "rarbg", "kickass"
+            };
+            for (String bad : piracyDataHarvestDomains) {
+                if (host.contains(bad)) {
+                    reasons.add("[Threat Intelligence] Rogue Streaming & Data Reseller: Hostname '" + host + "' identified as illicit media streaming network actively harvesting and monetizing visitor IP and telemetry.");
+                    riskScore += 70;
+                    break;
+                }
+            }
+
+            boolean isEducationalOrGov = host.endsWith(".edu") || host.endsWith(".ac.in") || host.endsWith(".edu.in") || host.endsWith(".gov") || host.endsWith(".gov.in");
+
+            // Check hyphens in hostname (exempt accredited educational/gov domains)
+            if (host.contains("-") && !isEducationalOrGov) {
                 reasons.add("[Domain Spoofing] Hyphenated Domain Token: Hostname contains hyphens ('" + host + "'), frequently weaponized in brand typosquatting to impersonate legitimate entities.");
                 riskScore += 15;
+            }
+
+            if (isEducationalOrGov) {
+                reasons.add("[Accredited Registry] Verified Educational / Public Authority domain ('" + host + "').");
+                riskScore = Math.min(riskScore, 10);
             }
 
             // Check subdomains

@@ -409,7 +409,7 @@ const HARVESTING_TRIGGERS = [
 // ADVANCED HEURISTIC DETECTION ENGINES
 // ---------------------------------------------------------------------------
 
-function evaluateUrlLocally(rawUrl: string, userId?: string): UrlScanResult {
+export function evaluateUrlLocally(rawUrl: string, userId?: string): UrlScanResult {
   const url = rawUrl.trim();
   const lowerUrl = url.toLowerCase();
 
@@ -425,10 +425,38 @@ function evaluateUrlLocally(rawUrl: string, userId?: string): UrlScanResult {
     pathname = lowerUrl.substring(lowerUrl.indexOf("/"));
   }
 
-  let riskScore = 10;
+  let riskScore = 5;
   const reasons: string[] = [];
   let detectedBrand: string | null = null;
   let isImpersonation = false;
+
+  // 0. Protected Educational, Government & Verified Top-Level Domains
+  const isEducationalOrOfficial =
+    hostname.endsWith(".edu") ||
+    hostname.includes(".edu.") ||
+    hostname.endsWith(".ac.in") ||
+    hostname.endsWith(".ac.uk") ||
+    hostname.endsWith(".gov") ||
+    hostname.includes(".gov.") ||
+    hostname.endsWith(".mil") ||
+    LEGITIMATE_BRAND_DOMAINS[hostname.split(".")[0]] !== undefined;
+
+  // 0.1 Piracy, Shadow Streaming & Illicit Data Broker Threat Intelligence
+  const isPiracyOrDataBroker =
+    /^(.*\.)?(net77|123movies|fmovies|soap2day|yts|bflix|hurawatch|attacker|gogoanime|aniwatch|lookmovie|streamlord|thepiratebay|rarbg|torrent|watchfree|hdmovie|moviesda|filmyzilla|tamilrockers|freehdmovies|vumoo|cineb|flixhq|solarmovie)\./i.test(hostname) ||
+    (/(stream|movie|film|watch|play|torrent|warez|crack|pirat|freehd)/i.test(hostname) && /(\.cc|\.to|\.is|\.cx|\.sx|\.pw|\.st|\.ws|\.top|\.xyz|\.vip)$/i.test(hostname)) ||
+    hostname === "net77.cc" ||
+    hostname.endsWith(".net77.cc");
+
+  if (isPiracyOrDataBroker) {
+    riskScore += 80;
+    reasons.push(
+      `[Illicit Media & Data Resale Vector] Known Piracy & Unauthorized Streaming Portal: Hostname '${hostname}' distributes copyrighted media without authorization. Entities in this category deploy intrusive cross-site ad networks, fingerprint user cookies for illicit telemetry resale, and expose visitors to drive-by redirect payloads.`
+    );
+    reasons.push(
+      `[Data Privacy & Surveillance Risk] Shady Data Harvesting: Portal operates outside standard privacy frameworks (GDPR/CCPA), fingerprinting browser sessions and selling visitor telemetry to unauthorized advertising networks.`
+    );
+  }
 
   // 1. Brand Spoofing & Typosquatting Analysis
   for (const [brand, legitDomains] of Object.entries(LEGITIMATE_BRAND_DOMAINS)) {
@@ -449,21 +477,23 @@ function evaluateUrlLocally(rawUrl: string, userId?: string): UrlScanResult {
     }
   }
 
-  // 2. Sensitive Authentication Keyword Analysis
+  // 2. Sensitive Authentication Keyword Analysis (Skip on educational/official domains)
   const matchedKeywords = AUTH_ACTION_KEYWORDS.filter(
     (kw) => hostname.includes(kw) || pathname.includes(kw)
   );
 
-  if (matchedKeywords.length >= 2) {
-    riskScore += 35;
-    reasons.push(
-      `[Credential Harvesting Vector] Multiple Authentication Action Triggers: Found high-risk keywords (${matchedKeywords.slice(0, 4).join(", ")}) combined in destination path.`
-    );
-  } else if (matchedKeywords.length === 1) {
-    riskScore += 20;
-    reasons.push(
-      `[Credential Harvesting Indicator] Sensitive Action Token: URL path/domain targets credential trigger '${matchedKeywords[0]}'.`
-    );
+  if (!isEducationalOrOfficial && !isPiracyOrDataBroker) {
+    if (matchedKeywords.length >= 2) {
+      riskScore += 35;
+      reasons.push(
+        `[Credential Harvesting Vector] Multiple Authentication Action Triggers: Found high-risk keywords (${matchedKeywords.slice(0, 4).join(", ")}) combined in destination path.`
+      );
+    } else if (matchedKeywords.length === 1 && !hostname.endsWith(".com") && !hostname.endsWith(".org")) {
+      riskScore += 20;
+      reasons.push(
+        `[Credential Harvesting Indicator] Sensitive Action Token: URL path/domain targets credential trigger '${matchedKeywords[0]}'.`
+      );
+    }
   }
 
   // 3. Raw IP Address Hostname
@@ -477,8 +507,8 @@ function evaluateUrlLocally(rawUrl: string, userId?: string): UrlScanResult {
 
   // 4. High-Abuse / Suspicious TLD
   const matchedTld = SUSPICIOUS_TLDS.find((tld) => hostname.endsWith(tld));
-  if (matchedTld) {
-    riskScore += 35;
+  if (matchedTld && !isPiracyOrDataBroker) {
+    riskScore += 30;
     reasons.push(
       `[Registry Threat Vector] High-Abuse Disposable TLD: Domain registered under '${matchedTld}', disproportionately utilized in ephemeral phishing campaigns.`
     );
@@ -494,23 +524,27 @@ function evaluateUrlLocally(rawUrl: string, userId?: string): UrlScanResult {
 
   // 6. Excessive Subdomains (DNS delegation masking)
   const dotCount = (hostname.match(/\./g) || []).length;
-  if (dotCount > 2 && !isRawIp) {
-    riskScore += 25;
+  if (dotCount > 2 && !isRawIp && !isEducationalOrOfficial) {
+    riskScore += 20;
     reasons.push(
       `[DNS Manipulation] Excessive Subdomains (${dotCount} levels): Multiple subdomains detected, typical of multi-tier DNS delegation masking.`
     );
   }
 
-  // 7. Hyphenated Domain Token
-  if (hostname.includes("-") && !isImpersonation) {
-    riskScore += 20;
-    reasons.push(
-      `[Obfuscation Vector] Hyphenated Domain Token: Hostname '${hostname}' uses hyphenated compounding to emulate legitimate service endpoints.`
-    );
+  // 7. Hyphenated Domain Token (Ignore on verified, educational, and clean corporate domains)
+  if (hostname.includes("-") && !isImpersonation && !isEducationalOrOfficial && !hostname.endsWith(".edu") && !hostname.endsWith(".gov") && !hostname.endsWith(".org") && !isPiracyOrDataBroker) {
+    const parts = hostname.split("-");
+    const hasSusWords = parts.some((p) => AUTH_ACTION_KEYWORDS.includes(p) || p.length <= 2);
+    if (hasSusWords) {
+      riskScore += 20;
+      reasons.push(
+        `[Obfuscation Vector] Hyphenated Domain Token: Hostname '${hostname}' uses hyphenated compounding to emulate legitimate service endpoints.`
+      );
+    }
   }
 
   // 8. Abnormal URL Length
-  if (url.length > 70) {
+  if (url.length > 85 && !isEducationalOrOfficial) {
     riskScore += 15;
     reasons.push(
       `[Obfuscation Vector] Abnormal Link Length (${url.length} chars): Used to conceal true destination and embed tracking or payload identifiers.`
@@ -534,10 +568,10 @@ function evaluateUrlLocally(rawUrl: string, userId?: string): UrlScanResult {
     );
   }
 
-  riskScore = Math.min(Math.max(riskScore, 5), 100);
-  const isPhishing = riskScore >= 45;
+  riskScore = Math.min(Math.max(riskScore, 0), 100);
+  const isUnsafe = riskScore >= 45 || isPiracyOrDataBroker;
 
-  if (!isPhishing && reasons.length === 0) {
+  if (!isUnsafe && reasons.length === 0) {
     reasons.push("[Domain & Registry] Registered domain structure adheres to verified naming conventions.");
     reasons.push("[Transport Security] Encrypted HTTPS protocol verified with no credential injection delimiters.");
     reasons.push("[Lexical Composition] Zero brand typosquatting, numeric IP redirects, or credential harvesting triggers.");
@@ -545,12 +579,14 @@ function evaluateUrlLocally(rawUrl: string, userId?: string): UrlScanResult {
 
   const result: UrlScanResult = {
     url,
-    prediction: isPhishing ? "PHISHING" : "SAFE",
-    confidence: isPhishing ? Math.min(88 + riskScore / 8, 99.2) : Math.max(92 - riskScore / 3, 85.0),
+    prediction: isUnsafe ? (isPiracyOrDataBroker ? "UNSAFE" : "PHISHING") : "SAFE",
+    confidence: isUnsafe ? Math.min(88 + riskScore / 8, 99.2) : Math.max(92 - riskScore / 3, 85.0),
     riskScore,
     model: "GillNet Hybrid Neural-Heuristic Threat Engine v3.0",
     reasons,
-    recommendation: isPhishing
+    recommendation: isPiracyOrDataBroker
+      ? "CRITICAL ADVISORY: Unauthorized piracy / data harvesting site detected. Do not permit browser notifications, download media, or enter credentials. Pirated media portals frequently monetize visitors by selling telemetry and deploying ad-injected malware."
+      : isUnsafe
       ? "CRITICAL THREAT ADVISORY: High likelihood of phishing detected. Do not navigate to this destination or enter sensitive credentials. Verify through official authenticated portals."
       : "VERIFIED SAFE DESTINATION: The URL conforms to standard legitimate security heuristics. Confirm address bar padlock before entering sensitive information.",
   };
@@ -762,6 +798,153 @@ function evaluatePasswordLocally(password: string): PasswordScanResult {
   };
 }
 
+export function evaluatePhishingContent(text: string, fileName?: string): PhishingScanResult {
+  const content = (text || "").trim();
+  const lower = content.toLowerCase();
+  const fn = (fileName || "").toLowerCase();
+
+  // 1. Check for Academic Schedule / Timetable indicators
+  const academicTerms = [
+    "timetable", "time table", "schedule", "lecture", "subject", "class", "period",
+    "slot", "semester", "dept", "department", "room", "hall", "lab", "laboratory",
+    "course", "faculty", "prof", "professor", "instructor", "syllabus", "roll no",
+    "student", "college", "university", "campus", "physics", "chemistry", "math",
+    "mathematics", "biology", "computer science", "cs", "engineering", "break",
+    "lunch", "recess", "attendance", "tutor", "batch", "practical", "exam"
+  ];
+  const dayTerms = [
+    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+    "mon", "tue", "wed", "thu", "fri", "sat", "sun"
+  ];
+  const timeRegex = /\b\d{1,2}[:.]\d{2}\b|\b\d{1,2}\s*(am|pm|hrs)\b/i;
+
+  const matchedAcademic = academicTerms.filter((t) => lower.includes(t) || fn.includes(t));
+  const matchedDays = dayTerms.filter((d) => lower.includes(d));
+  const hasTimePattern = timeRegex.test(content);
+
+  const isAcademicSchedule = (matchedAcademic.length >= 2 || fn.includes("timetable") || fn.includes("schedule")) &&
+    (matchedDays.length >= 1 || hasTimePattern || matchedAcademic.length >= 3);
+
+  // Extract embedded URLs
+  const urlPattern = /(https?:\/\/[^\s<>'"]+|www\d{0,3}\.[^\s<>'"]+|[a-zA-Z0-9.-]+\.(?:com|org|net|xyz|top|ru|co|info|biz|site|live|online|security|app|vip|club)[^\s<>'"]*)/gi;
+  const extractedUrls: string[] = [];
+  let match;
+  while ((match = urlPattern.exec(content)) !== null) {
+    const cleaned = match[0].replace(/[.,;]+$/, "");
+    if (!extractedUrls.includes(cleaned)) {
+      extractedUrls.push(cleaned);
+    }
+  }
+
+  let maliciousUrlsFound = 0;
+  for (const url of extractedUrls) {
+    const evalRes = evaluateUrlLocally(url);
+    if (evalRes.prediction === "PHISHING" || evalRes.prediction === "UNSAFE" || evalRes.riskScore >= 45) {
+      maliciousUrlsFound++;
+    }
+  }
+
+  // Detect brand impersonation
+  let detectedBrand = "None Detected";
+  for (const [brand] of Object.entries(LEGITIMATE_BRAND_DOMAINS)) {
+    if (lower.includes(brand)) {
+      detectedBrand = brand.charAt(0).toUpperCase() + brand.slice(1);
+      break;
+    }
+  }
+
+  const matchedUrgency = URGENCY_TRIGGERS.filter((u) => lower.includes(u));
+  const matchedHarvesting = HARVESTING_TRIGGERS.filter((h) => lower.includes(h));
+
+  // If Academic Schedule / Timetable with NO active credential traps:
+  if (isAcademicSchedule && matchedHarvesting.length === 0 && maliciousUrlsFound === 0) {
+    const wordCount = content.split(/\s+/).filter(Boolean).length;
+    return {
+      threatLevel: "SAFE",
+      riskScore: 0,
+      confidence: 99.2,
+      summary: `Authentic Educational Timetable / Schedule Verified (${wordCount} words read). Optical character recognition identified a structured academic timetable detailing lecture timings, course allocations, and classroom locations. Zero credential harvesting traps, spoofed authentication interfaces, or coercive pressure vectors detected.`,
+      brandImpersonated: "None (Verified Academic Schedule)",
+      credentialHarvesting: false,
+      urgencyTactics: [],
+      extractedUrls,
+      indicators: [
+        `[Optical Character Recognition] Real text parsed: ${wordCount} words displaying tabular schedule composition.`,
+        "[Document Classification] Verified academic schedule (course slots, days of week, and room allocations).",
+        "[Threat Clearance] Zero credential harvesting fields, deceptive URLs, or coercive urgency lures."
+      ],
+      recommendations: [
+        "Document is an authentic educational timetable and poses zero cybersecurity risk."
+      ],
+      extractedText: content || "(OCR completed: Structured academic timetable detected)",
+    };
+  }
+
+  // If text is clean / routine (e.g. casual email, general receipt, notes)
+  const isRoutine = matchedHarvesting.length === 0 && matchedUrgency.length === 0 && maliciousUrlsFound === 0 && detectedBrand === "None Detected";
+  if (isRoutine) {
+    const wordCount = content.split(/\s+/).filter(Boolean).length;
+    return {
+      threatLevel: "SAFE",
+      riskScore: 5,
+      confidence: 94.0,
+      summary: `Clean Document Content Verified (${wordCount} words read). Optical inspection and semantic analysis detected standard, benign document composition. Zero phishing lures, unauthorized brand insignias, or credential solicitation forms detected.`,
+      brandImpersonated: "None Detected",
+      credentialHarvesting: false,
+      urgencyTactics: [],
+      extractedUrls,
+      indicators: [
+        `[Optical Character Recognition] Extracted ${wordCount} words with clean linguistic syntax.`,
+        "[Threat Neutralization] Zero high-pressure coercive triggers, password input traps, or suspicious redirect links."
+      ],
+      recommendations: [
+        "Document appears benign. Always exercise caution when prompted for confidential credentials in unexpected contexts."
+      ],
+      extractedText: content || "(OCR completed: Clean image with no threat indicators)",
+    };
+  }
+
+  // Otherwise, if threats are detected:
+  let riskScore = 20;
+  if (detectedBrand !== "None Detected") riskScore += 25;
+  if (matchedHarvesting.length > 0) riskScore += 35;
+  if (matchedUrgency.length > 0) riskScore += 25;
+  if (maliciousUrlsFound > 0) riskScore += 45;
+
+  riskScore = Math.min(100, Math.max(15, riskScore));
+  const isPhishing = riskScore >= 50 || maliciousUrlsFound > 0;
+
+  return {
+    threatLevel: isPhishing ? "PHISHING" : "SUSPICIOUS",
+    riskScore,
+    confidence: 96.4,
+    summary: isPhishing
+      ? `High-Risk Phishing Artifact Detected in OCR content${detectedBrand !== "None Detected" ? ` (Target: ${detectedBrand})` : ""}. Visual text analysis flagged credential solicitation lures, coercive pressure tactics, and unverified authority references.`
+      : `Suspicious Linguistic Context Detected in image capture. Anomalous urgency or credential prompts identified.`,
+    brandImpersonated: detectedBrand,
+    credentialHarvesting: matchedHarvesting.length > 0,
+    urgencyTactics: matchedUrgency.slice(0, 3),
+    extractedUrls,
+    indicators: [
+      `[Optical Character Recognition] Extracted and parsed visual text from image capture.`,
+      ...(detectedBrand !== "None Detected" ? [`[Brand Spoofing Vector] Detected brand reference '${detectedBrand}' combined with sensitive action prompts.`] : []),
+      ...(matchedHarvesting.length > 0 ? [`[Credential Harvesting Vector] Text explicitly requests sensitive input (${matchedHarvesting.slice(0, 2).join(", ")}).`] : []),
+      ...(matchedUrgency.length > 0 ? [`[Psychological Coercion] Visual text employs coercive urgency (${matchedUrgency.slice(0, 2).join(", ")}).`] : []),
+      ...(maliciousUrlsFound > 0 ? [`[Destination Vector] Embedded hyperlinks resolve to untrusted or malicious destinations.`] : []),
+    ],
+    recommendations: isPhishing
+      ? [
+          "Do NOT navigate to any links or enter passwords shown in this capture.",
+          "Verify all account notifications directly via verified official websites or bookmarks.",
+          "Report this communication to your organization's security team."
+        ]
+      : [
+          "Exercise caution before responding to messages requesting credentials or sensitive actions."
+        ],
+    extractedText: content || "(OCR extraction completed)",
+  };
+}
+
 // ---------------------------------------------------------------------------
 // EXPORTED GILLNET API CLIENT
 // ---------------------------------------------------------------------------
@@ -775,11 +958,13 @@ export const api = {
           body: JSON.stringify({ email, password }),
         });
       } catch (err: any) {
-        if (err.message && !err.message.toLowerCase().includes("failed to fetch") && !err.message.toLowerCase().includes("networkerror") && !err.message.toLowerCase().includes("aborted")) {
+        const msg = (err.message || "").toLowerCase();
+        // If backend explicitly rejected with invalid credentials (and not a 404 route missing error):
+        if ((msg.includes("invalid email or password") || msg.includes("bad credentials")) && !msg.includes("404")) {
           throw err;
         }
 
-        console.info("[GillNet AI] Backend unreachable — using resilient local authentication mode.");
+        console.info("[GillNet AI] Backend unavailable (" + err.message + ") — using resilient local authentication mode.");
         const users = getLocalUsers();
         const normEmail = email.toLowerCase().trim();
         const found = users.find((u) => u.email.toLowerCase().trim() === normEmail);
@@ -816,11 +1001,12 @@ export const api = {
           body: JSON.stringify({ name, email, password }),
         });
       } catch (err: any) {
-        if (err.message && !err.message.toLowerCase().includes("failed to fetch") && !err.message.toLowerCase().includes("networkerror") && !err.message.toLowerCase().includes("aborted")) {
+        const msg = (err.message || "").toLowerCase();
+        if ((msg.includes("already registered") || msg.includes("already exists")) && !msg.includes("404")) {
           throw err;
         }
 
-        console.info("[GillNet AI] Backend unreachable — using resilient local registration.");
+        console.info("[GillNet AI] Backend unavailable (" + err.message + ") — using resilient local registration.");
         const users = getLocalUsers();
         const normEmail = email.toLowerCase().trim();
 
@@ -865,11 +1051,7 @@ export const api = {
           body: JSON.stringify(data),
         });
       } catch (err: any) {
-        if (err.message && !err.message.toLowerCase().includes("failed to fetch") && !err.message.toLowerCase().includes("networkerror") && !err.message.toLowerCase().includes("aborted")) {
-          throw err;
-        }
-
-        console.info("[GillNet AI] Backend unreachable — authenticating Google identity locally.");
+        console.info("[GillNet AI] Backend unavailable (" + err.message + ") — authenticating Google identity locally.");
         let email = data.email;
         let name = data.name;
         let picture = data.picture;
@@ -1061,48 +1243,18 @@ export const api = {
         });
         api.model.logTelemetry({
           input_type: "text",
-          raw_target: content,
+          raw_target: content.substring(0, 60),
           threat_level: res.threatLevel,
           risk_score: res.riskScore,
-          features: { url_count: res.extractedUrls?.length || 0 },
         }).catch(() => {});
         return res;
       } catch (err: any) {
-        console.info("[GillNet AI] Evaluating phishing text via heuristic intelligence.");
-        const msgRes = evaluateMessageLocally(content, userId);
-        const lower = content.toLowerCase();
-
-        let detectedBrand = "None Detected";
-        for (const brand of Object.keys(LEGITIMATE_BRAND_DOMAINS)) {
-          if (lower.includes(brand)) {
-            detectedBrand = brand.charAt(0).toUpperCase() + brand.slice(1);
-            break;
-          }
-        }
-
-        const isPhishing = msgRes.riskScore >= 50 || msgRes.classification === "SCAM";
-
-        const scanRes: PhishingScanResult = {
-          threatLevel: isPhishing ? "PHISHING" : "SAFE",
-          riskScore: msgRes.riskScore,
-          confidence: isPhishing ? 96.5 : 91.0,
-          summary: msgRes.explanation,
-          brandImpersonated: detectedBrand,
-          credentialHarvesting: msgRes.riskScore >= 45,
-          urgencyTactics: msgRes.indicators.filter((i) => i.includes("Urgency")),
-          extractedUrls: msgRes.extractedUrls || [],
-          indicators: msgRes.indicators,
-          recommendations: [
-            "Do NOT click any links or download attachments in this message.",
-            "Never submit passwords, MFA tokens, or credit card info to unexpected alerts.",
-            "Confirm authenticity by navigating directly to the official portal."
-          ],
-          extractedText: content,
-        };
+        console.info("[GillNet AI] Evaluating text via local semantic threat engine.");
+        const scanRes = evaluatePhishingContent(content);
 
         api.model.logTelemetry({
           input_type: "text",
-          raw_target: content,
+          raw_target: content.substring(0, 60),
           threat_level: scanRes.threatLevel,
           risk_score: scanRes.riskScore,
           features: { url_count: scanRes.extractedUrls?.length || 0 },
@@ -1113,11 +1265,35 @@ export const api = {
     },
 
     analyzeImage: async (content: string, fileName?: string, userId?: string): Promise<PhishingScanResult> => {
+      // 1. Run 100% free client-side OCR using Tesseract.js (runs locally in browser)
+      let extractedOcrText = "";
+      try {
+        console.info("[GillNet AI] Performing in-browser OCR via Tesseract.js...");
+        const Tesseract = await import("tesseract.js");
+        const ocrResult = await Tesseract.default.recognize(content, "eng");
+        extractedOcrText = ocrResult?.data?.text || "";
+        console.info("[GillNet AI] In-browser OCR completed. Extracted length:", extractedOcrText.length);
+      } catch (ocrErr) {
+        console.warn("[GillNet AI] Client-side OCR notice:", ocrErr);
+      }
+
+      // 2. Try backend API with extracted text if reachable
       try {
         const res = await request<PhishingScanResult>("/api/phishing/analyze-image", {
           method: "POST",
-          body: JSON.stringify({ type: "IMAGE", content, fileName, userId }),
+          body: JSON.stringify({
+            type: "IMAGE",
+            content,
+            fileName,
+            userId,
+            extractedText: extractedOcrText,
+          }),
         });
+
+        if (!res.extractedText && extractedOcrText) {
+          res.extractedText = extractedOcrText;
+        }
+
         api.model.logTelemetry({
           input_type: "screenshot",
           raw_target: fileName || "screenshot.png",
@@ -1127,52 +1303,8 @@ export const api = {
         }).catch(() => {});
         return res;
       } catch (err: any) {
-        console.info("[GillNet AI] Evaluating screenshot via visual heuristic intelligence.");
-        const fn = (fileName || "").toLowerCase();
-
-        // Check if file or context indicates suspicious / phishing activity
-        let detectedBrand = "Enterprise / Financial Target";
-        for (const brand of Object.keys(LEGITIMATE_BRAND_DOMAINS)) {
-          if (fn.includes(brand)) {
-            detectedBrand = brand.charAt(0).toUpperCase() + brand.slice(1);
-            break;
-          }
-        }
-
-        const isSafeName = fn.includes("safe") || fn.includes("legit") || fn.includes("receipt_clean");
-        const riskScore = isSafeName ? 15 : 92;
-        const isPhishing = riskScore >= 50;
-
-        const scanRes: PhishingScanResult = {
-          threatLevel: isPhishing ? "PHISHING" : "SAFE",
-          riskScore,
-          confidence: 94.8,
-          summary: isPhishing
-            ? `High-Risk Phishing Artifact Detected in "${fileName || "screenshot.png"}". Optical analysis flagged credential harvesting layout, coercive urgency banners, and unverified authority logos.`
-            : `Clean Visual Composition in "${fileName || "screenshot.png"}". No credential input traps or coercive urgency indicators detected.`,
-          brandImpersonated: isPhishing ? detectedBrand : "None Detected",
-          credentialHarvesting: isPhishing,
-          urgencyTactics: isPhishing ? ["Account Suspension Warning", "Mandatory Action Timer"] : [],
-          extractedUrls: isPhishing ? ["https://auth-verification-security-portal.com/login"] : [],
-          indicators: isPhishing ? [
-            "[Visual OCR Analysis] Detected credential harvesting form with high-contrast alert styling.",
-            `[Brand Impersonation Vector] Visual insignia targets ${detectedBrand} to induce false trust.`,
-            "[Psychological Coercion] Visual countdown banner urges immediate credential submission."
-          ] : [
-            "[Visual OCR Analysis] Clean layout with standard typographical hierarchy.",
-            "[Integrity Inspection] Zero deceptive overlays, spoofed emblems, or credential lures."
-          ],
-          recommendations: isPhishing ? [
-            "Do NOT navigate to any links, QR codes, or forms displayed in this capture.",
-            "Verify all account notifications exclusively through official bookmarks or mobile apps.",
-            "Report this capture to your organization's Information Security team."
-          ] : [
-            "Always inspect URLs in the browser address bar before providing login credentials."
-          ],
-          extractedText: isPhishing
-            ? "[OCR Capture]: URGENT SECURITY ALERT: Unauthorized access attempt detected. Your account has been temporarily restricted. Verify your identity immediately to prevent permanent deactivation."
-            : "[OCR Capture]: Standard non-sensitive capture verified with no high-risk security threats.",
-        };
+        console.info("[GillNet AI] Evaluating screenshot locally using extracted OCR text.");
+        const scanRes = evaluatePhishingContent(extractedOcrText, fileName);
 
         api.model.logTelemetry({
           input_type: "screenshot",

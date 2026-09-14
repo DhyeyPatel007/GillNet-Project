@@ -68,9 +68,18 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function DashboardPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated, isLoading, openAuthModal } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      const timer = setTimeout(() => {
+        openAuthModal("login");
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, isAuthenticated, openAuthModal]);
 
   // Theme state: dark (default) or light
   const [theme, setTheme] = useState<"dark" | "light">(() => {
@@ -295,6 +304,72 @@ function DashboardPage() {
     { label: "Recent Activity", href: "#history" },
     { label: "Security Intel", href: "#security" },
   ];
+
+  // ---------------------------------------------------------------------------
+  // AUTHENTICATION ROUTE GUARD
+  // ---------------------------------------------------------------------------
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-shell flex flex-col items-center justify-center p-6 text-foreground font-sans">
+        <div className="flex flex-col items-center gap-4 text-center max-w-sm animate-fadeIn">
+          <div className="relative size-16 flex items-center justify-center">
+            <div className="absolute inset-0 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+            <Shield className="size-8 text-primary animate-pulse" />
+          </div>
+          <h2 className="font-serif text-xl font-medium text-bright">Verifying Security Clearance...</h2>
+          <p className="text-xs text-muted-foreground font-sans leading-relaxed">
+            Connecting to GillNet AI threat intelligence and verifying authentication token.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-shell flex flex-col items-center justify-center p-6 text-foreground font-sans selection:bg-safe selection:text-black">
+        <div className="w-full max-w-md rounded-[28px] border-2 border-frame bg-surface p-8 text-center shadow-2xl space-y-6 animate-fadeIn">
+          <div className="mx-auto flex size-20 items-center justify-center rounded-2xl border border-destructive/30 bg-destructive/10 text-destructive shadow-inner">
+            <LockKeyhole className="size-10" />
+          </div>
+
+          <div className="space-y-2">
+            <span className="inline-block rounded-full bg-destructive/15 px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-wider text-destructive">
+              Access Restricted
+            </span>
+            <h1 className="font-serif text-2xl font-normal text-bright">
+              Security Clearance Required
+            </h1>
+            <p className="font-sans text-xs sm:text-sm text-muted-foreground leading-relaxed">
+              The GillNet AI Security Operations Center and Threat Intelligence Dashboard is protected. Please sign in or create an account to access live link scanners, OCR visual analysis, and security logs.
+            </p>
+          </div>
+
+          <div className="space-y-3 pt-2">
+            <Button
+              onClick={() => openAuthModal("login")}
+              className="w-full h-12 rounded-full bg-primary text-primary-foreground font-serif text-[15px] font-medium shadow-md hover:bg-primary/90 transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <KeyRound className="size-4" />
+              <span>Sign In to Access Dashboard</span>
+            </Button>
+
+            <a
+              href="/"
+              className="inline-flex items-center justify-center w-full h-10 rounded-full border border-frame bg-background text-xs font-medium text-bright hover:bg-surface transition-colors"
+            >
+              Return to Landing Page
+            </a>
+          </div>
+
+          <div className="pt-4 border-t border-frame/40 flex items-center justify-center gap-2 text-[11px] text-muted-foreground font-mono">
+            <ShieldAlert className="size-3.5 text-warning" />
+            <span>Route Guard Active · Authentication Required</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -778,10 +853,19 @@ function DashboardPage() {
                             <CheckCircle2 className="size-3.5" /> Ready for AI visual analysis
                           </p>
                         </div>
-                        <div className="flex gap-2">
+
+                        {phishingScanning && (
+                          <div className="flex items-center gap-2 rounded-xl bg-primary/10 border border-primary/20 px-3 py-2 text-xs text-primary animate-pulse">
+                            <Loader2 className="size-3.5 animate-spin shrink-0" />
+                            <span>Extracting visual text via client-side OCR (Tesseract.js) & inspecting threat semantics...</span>
+                          </div>
+                        )}
+
+                        <div className="flex flex-wrap items-center justify-end gap-2">
                           <Button
-                            variant="destructive"
+                            variant="outline"
                             size="sm"
+                            disabled={phishingScanning}
                             onClick={removeImage}
                             className="gap-1 rounded-xl text-xs cursor-pointer"
                           >
@@ -793,7 +877,14 @@ function DashboardPage() {
                             onClick={handlePhishingScan}
                             className="rounded-xl bg-primary text-primary-foreground text-xs cursor-pointer"
                           >
-                            {phishingScanning ? "Analyzing..." : "Analyze Screenshot"}
+                            {phishingScanning ? (
+                              <span className="flex items-center gap-1.5">
+                                <Loader2 className="size-3.5 animate-spin" />
+                                <span>Scanning OCR & Text...</span>
+                              </span>
+                            ) : (
+                              "Analyze Screenshot"
+                            )}
                           </Button>
                         </div>
                       </div>
@@ -973,7 +1064,7 @@ function DashboardPage() {
                       <div className="rounded-xl border border-frame/40 bg-background/40 p-2.5 space-y-1.5 text-xs">
                         <div className="flex items-center justify-between">
                           <span className="font-semibold text-bright flex items-center gap-1.5">
-                            <FileText className="size-3.5 text-primary" /> Visual Text Extracted (RapidOCR)
+                            <FileText className="size-3.5 text-primary" /> Visual Text Extracted (In-Browser OCR Engine)
                           </span>
                           <span className="text-[10px] text-muted-foreground font-mono">
                             {phishingResult.extractedText.split("\n").filter(Boolean).length} lines detected

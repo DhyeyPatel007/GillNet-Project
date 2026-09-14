@@ -1,0 +1,12 @@
+target/
+.mvn/
+mvnw
+mvnw.cmd
+.git/
+.gitignore
+*.log
+ml-service/
+audit/
+test_ocr.ps1
+PROJECT_CONTEXT.md
+README.md
