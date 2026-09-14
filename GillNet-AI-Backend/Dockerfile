@@ -34,6 +34,5 @@ ENV PORT=8081
 # Document listening port
 EXPOSE 8081
 
-# Direct exec form: Java becomes true PID 1, clears inherited base CMD, zero shell overhead
-ENTRYPOINT ["java", "-jar", "app.jar"]
-CMD []
+# Render executes the CMD instruction by default; use absolute path to JAR
+CMD ["java", "-jar", "/app/app.jar"]
