@@ -22,23 +22,26 @@ RUN mvn clean package -DskipTests -B
 # =============================================================================
 FROM eclipse-temurin:21-jre-jammy
 
+# Create non-root system user and prepare /app directory with proper ownership
+RUN groupadd -r gillnet && \
+    useradd -r -g gillnet -m -d /home/gillnet -s /bin/bash gillnet && \
+    mkdir -p /app && \
+    chown -R gillnet:gillnet /app
+
 WORKDIR /app
 
-# Create a non-root system user for container security
-RUN groupadd -r gillnet && useradd -r -g gillnet -m -s /bin/bash gillnet
-
 # Copy the executable Spring Boot fat JAR from the builder stage
-COPY --from=builder --chown=gillnet:gillnet /build/target/*.jar app.jar
+COPY --from=builder --chown=gillnet:gillnet /build/target/*.jar /app/app.jar
 
 # Switch to non-root user
 USER gillnet
 
 # Default port configuration (Render dynamically sets $PORT in runtime)
 ENV PORT=8081
-ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom"
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom"
 
 # Document listening port
 EXPOSE 8081
 
-# Launch Spring Boot with dynamic port binding to Render's $PORT
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Dserver.port=${PORT} -jar app.jar"]
+# Launch Spring Boot with exec so Java replaces shell as PID 1
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -Dserver.port=${PORT:-8081} -jar app.jar \"$@\"", "--"]
