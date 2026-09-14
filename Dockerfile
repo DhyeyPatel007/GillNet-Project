@@ -18,37 +18,16 @@ COPY GillNet-AI-Backend/src ./src
 RUN mvn clean package -DskipTests -B
 
 # =============================================================================
-# Stage 2: Runtime Stage (Lightweight Eclipse Temurin JRE 21)
+# Stage 2: Runtime Stage
 # =============================================================================
-FROM eclipse-temurin:21-jre-jammy
+FROM amazoncorretto:21-alpine3.22
 
 WORKDIR /app
 
-# Ensure standard system paths find java
-RUN ln -sf /opt/java/openjdk/bin/java /usr/bin/java && \
-    ln -sf /opt/java/openjdk/bin/java /usr/local/bin/java
-
-# Copy the executable Spring Boot fat JAR from builder stage
 COPY --from=builder /build/target/gillnet-ai-0.0.1-SNAPSHOT.jar /app/app.jar
-RUN cp /app/app.jar /app.jar
+COPY GillNet-AI-Backend/data /app/data
 
-# Copy initial data store
-COPY GillNet-AI-Backend/data ./data
-
-# Copy entrypoint startup script
-COPY GillNet-AI-Backend/entrypoint.sh /app/entrypoint.sh
-
-# Ensure Unix LF line endings and executable permission
-RUN sed -i 's/\r$//' /app/entrypoint.sh && \
-    chmod +x /app/entrypoint.sh && \
-    ln -sf /app/entrypoint.sh /entrypoint.sh
-
-# Environment defaults (Render dynamically overrides $PORT)
 ENV PORT=8081
-ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom"
-
-# Document listening port
 EXPOSE 8081
 
-# Use entrypoint script with exec
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-Xms64m", "-Xmx256m", "-XX:MaxMetaspaceSize=160m", "-Djava.security.egd=file:/dev/./urandom", "-jar", "/app/app.jar"]
