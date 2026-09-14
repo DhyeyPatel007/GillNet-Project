@@ -115,17 +115,11 @@ function getApiBaseUrl(): string {
     return envUrl.trim().replace(/\/+$/, "");
   }
 
-  // Running in browser
-  if (typeof window !== "undefined") {
-    // If the site is served over HTTPS (e.g. Vercel), calling http://localhost is blocked as Mixed Content
-    if (window.location.protocol === "https:") {
-      return ""; // Default to relative /api or proxy
-    }
-    // Local testing over HTTP: connect to local Spring Boot backend on 8081
-    return "http://localhost:8081";
-  }
-
-  return "http://localhost:8081";
+  // A deployed frontend needs an explicit API origin.  Previously an HTTPS
+  // frontend used a relative `/api` URL, which sent requests to the static
+  // frontend host instead of Render and made every API call appear broken.
+  // Deployments can still override this stable default through VITE_API_URL.
+  return "https://gillnet-backend-recovery.onrender.com";
 }
 
 function getAuthHeader(): Record<string, string> {
