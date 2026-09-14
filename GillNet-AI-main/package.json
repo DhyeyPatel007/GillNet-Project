@@ -8,6 +8,8 @@
     "build": "NITRO_PRESET=vercel vite build",
     "build:client": "vite build",
     "build:vercel": "NITRO_PRESET=vercel vite build",
+    "build:render": "NITRO_PRESET=node-server vite build",
+    "start": "node .output/server/index.mjs",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
