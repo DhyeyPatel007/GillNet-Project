@@ -388,6 +388,23 @@
   color: #000000 !important;
 }
 
+/* Password fields: force the light theme explicitly. Chrome's UA stylesheet
+   and password-manager autofill can otherwise paint type="password" inputs
+   with a dark/opaque background (seen as a solid black bar in the sign-in
+   modal), even when sibling inputs render light. */
+input[type="password"] {
+  background-color: rgb(255 255 255 / 0.65);
+  color-scheme: light;
+}
+input[type="password"]:-webkit-autofill,
+input[type="password"]:-webkit-autofill:hover,
+input[type="password"]:-webkit-autofill:focus,
+input[type="password"]:-webkit-autofill:active {
+  -webkit-text-fill-color: #000;
+  -webkit-box-shadow: 0 0 0 1000px rgb(255 255 255 / 0.65) inset;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
 .dashboard-container.dashboard-light input {
   color: #000000 !important;
   background-color: #F3F3E3;
