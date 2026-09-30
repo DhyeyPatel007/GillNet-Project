@@ -95,8 +95,15 @@ export function AuthModal() {
 
   // Initialize Google Identity Services: render the official Google button
   // and trigger One Tap for the fastest sign-in.
+  //
+  // NOTE: a Google OAuth *client ID* is a public identifier by design — it is
+  // exposed in the sign-in button HTML and shipped in the JS bundle. The env
+  // var overrides this default when set.
+  const GOOGLE_CLIENT_ID_FALLBACK =
+    "282362758732-lan9p372fivlpm14pd4qcaintcffgumn.apps.googleusercontent.com";
   const setupRealGoogleSignIn = React.useCallback((): boolean => {
-    const clientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID;
+    const clientId =
+      (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID_FALLBACK;
     const google = (window as any).google;
     if (!clientId || !google?.accounts?.id) return false;
 
@@ -380,28 +387,20 @@ export function AuthModal() {
         ) : (
           /* PRIMARY GOOGLE AUTH + TABS VIEW */
           <div className="mt-4 w-full">
-            {/* REAL GOOGLE SIGN-IN: official GIS button + One Tap (fast) */}
-            {(import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ? (
-              <div className="w-full">
-                {googleLoading && (
-                  <div className="mb-2 flex items-center justify-center gap-2 font-sans text-[13px] text-black/70">
-                    <Loader2 size={16} className="animate-spin" />
-                    <span>Verifying with Google...</span>
-                  </div>
-                )}
-                <div
-                  ref={googleBtnRef}
-                  className="flex w-full justify-center overflow-hidden [&>div]:!w-full [&_iframe]:!mx-auto"
-                />
-              </div>
-            ) : (
-              <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-center font-sans text-[12px] leading-relaxed text-amber-800">
-                Google sign-in isn't configured yet. Add{" "}
-                <code className="font-mono">VITE_GOOGLE_CLIENT_ID</code> to your{" "}
-                <code className="font-mono">.env</code> and redeploy to enable
-                fast Google login.
-              </div>
-            )}
+            {/* REAL GOOGLE SIGN-IN: official GIS button + One Tap (fast).
+                Client ID always available via env var or built-in default. */}
+            <div className="w-full">
+              {googleLoading && (
+                <div className="mb-2 flex items-center justify-center gap-2 font-sans text-[13px] text-black/70">
+                  <Loader2 size={16} className="animate-spin" />
+                  <span>Verifying with Google...</span>
+                </div>
+              )}
+              <div
+                ref={googleBtnRef}
+                className="flex w-full justify-center overflow-hidden [&>div]:!w-full [&_iframe]:!mx-auto"
+              />
+            </div>
 
             {/* DIVIDER */}
             <div className="relative my-4 flex items-center justify-center">

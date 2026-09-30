@@ -41,7 +41,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (savedUser) {
           setUser(JSON.parse(savedUser));
         }
-        // Verify with backend
+        // Don't block the UI on the backend: render the cached session
+        // immediately and refresh the profile quietly in the background.
+        // (The backend may be waking from sleep; blocking here caused a
+        // long "Verifying Security Clearance..." black screen after login.)
+        setIsLoading(false);
         api.auth
           .getProfile()
           .then((profile) => {
@@ -49,10 +53,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             localStorage.setItem(USER_KEY, JSON.stringify(profile));
           })
           .catch(() => {
-            // Token may have expired or server offline; keep local user if offline or clear
+            // Token may have expired or server offline; keep cached session
             console.log("Could not refresh profile from server");
-          })
-          .finally(() => setIsLoading(false));
+          });
       } else {
         setIsLoading(false);
       }
