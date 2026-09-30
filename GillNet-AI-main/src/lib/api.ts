@@ -13,6 +13,7 @@ export interface UserResponseDTO {
   picture?: string | null;
   authProvider?: string;
   createdAt: string;
+  credits?: number;
 }
 
 export interface AuthResponse {
@@ -119,7 +120,7 @@ function getApiBaseUrl(): string {
   // frontend used a relative `/api` URL, which sent requests to the static
   // frontend host instead of Render and made every API call appear broken.
   // Deployments can still override this stable default through VITE_API_URL.
-  return "https://gillnet-backend-recovery.onrender.com";
+  return "https://gillnet-backend.onrender.com";
 }
 
 function getAuthHeader(): Record<string, string> {
@@ -174,55 +175,9 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 }
 
 // ---------------------------------------------------------------------------
-// RESILIENT LOCAL FALLBACK DATA STORE
+// LOCAL SCAN-HISTORY CACHE (display only — never used for authentication)
 // ---------------------------------------------------------------------------
 
-interface StoredLocalUser {
-  id: string;
-  name: string;
-  email: string;
-  password?: string;
-  picture?: string | null;
-  authProvider?: string;
-  createdAt: string;
-}
-
-const LOCAL_USERS_KEY = "gillnet_local_users_v2";
-const LOCAL_HISTORY_KEY = "gillnet_scan_history_v2";
-
-function getLocalUsers(): StoredLocalUser[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(LOCAL_USERS_KEY);
-    if (!raw) {
-      const defaultUsers: StoredLocalUser[] = [
-        {
-          id: "usr-alex-001",
-          name: "Alex Rivera",
-          email: "alex@gillnet.ai",
-          password: "StrongSecurePassword123!",
-          picture: "https://ui-avatars.com/api/?name=Alex+Rivera&background=0D8ABC&color=fff&rounded=true",
-          authProvider: "LOCAL",
-          createdAt: new Date().toISOString(),
-        },
-      ];
-      localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(defaultUsers));
-      return defaultUsers;
-    }
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
-}
-
-function saveLocalUsers(users: StoredLocalUser[]) {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(users));
-  } catch (e) {
-    console.warn("Failed to persist local users:", e);
-  }
-}
 
 function getLocalHistory(): ScanRecord[] {
   if (typeof window === "undefined") return [];
@@ -946,165 +901,29 @@ export function evaluatePhishingContent(text: string, fileName?: string): Phishi
 export const api = {
   auth: {
     login: async (email: string, password: string): Promise<AuthResponse> => {
-      try {
-        return await request<AuthResponse>("/api/auth/login", {
-          method: "POST",
-          body: JSON.stringify({ email, password }),
-        });
-      } catch (err: any) {
-        const msg = (err.message || "").toLowerCase();
-        // If backend explicitly rejected with invalid credentials (and not a 404 route missing error):
-        if ((msg.includes("invalid email or password") || msg.includes("bad credentials")) && !msg.includes("404")) {
-          throw err;
-        }
-
-        console.info("[GillNet AI] Backend unavailable (" + err.message + ") — using resilient local authentication mode.");
-        const users = getLocalUsers();
-        const normEmail = email.toLowerCase().trim();
-        const found = users.find((u) => u.email.toLowerCase().trim() === normEmail);
-
-        if (!found) {
-          throw new Error("Invalid email or password. Please verify your credentials or register a new account.");
-        }
-
-        if (found.password && found.password !== password) {
-          throw new Error("Invalid email or password.");
-        }
-
-        const userDto: UserResponseDTO = {
-          id: found.id,
-          name: found.name,
-          email: found.email,
-          picture: found.picture,
-          authProvider: found.authProvider || "LOCAL",
-          createdAt: found.createdAt,
-        };
-
-        return {
-          token: `gillnet_local_token_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-          message: "Signed in successfully via GillNet Local Resilience.",
-          user: userDto,
-        };
-      }
+      // No local fallback: credentials must be verified server-side.
+      // A backend failure/rejection is final — never mint a local session.
+      return await request<AuthResponse>("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
     },
 
     register: async (name: string, email: string, password: string): Promise<AuthResponse> => {
-      try {
-        return await request<AuthResponse>("/api/auth/register", {
-          method: "POST",
-          body: JSON.stringify({ name, email, password }),
-        });
-      } catch (err: any) {
-        const msg = (err.message || "").toLowerCase();
-        if ((msg.includes("already registered") || msg.includes("already exists")) && !msg.includes("404")) {
-          throw err;
-        }
-
-        console.info("[GillNet AI] Backend unavailable (" + err.message + ") — using resilient local registration.");
-        const users = getLocalUsers();
-        const normEmail = email.toLowerCase().trim();
-
-        if (users.some((u) => u.email.toLowerCase().trim() === normEmail)) {
-          throw new Error("An account is already registered with this email address.");
-        }
-
-        const newUser: StoredLocalUser = {
-          id: `usr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-          name: name.trim(),
-          email: normEmail,
-          password,
-          picture: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=000&color=F3F3E3&rounded=true`,
-          authProvider: "LOCAL",
-          createdAt: new Date().toISOString(),
-        };
-
-        users.push(newUser);
-        saveLocalUsers(users);
-
-        const userDto: UserResponseDTO = {
-          id: newUser.id,
-          name: newUser.name,
-          email: newUser.email,
-          picture: newUser.picture,
-          authProvider: newUser.authProvider,
-          createdAt: newUser.createdAt,
-        };
-
-        return {
-          token: `gillnet_local_token_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-          message: "Account created successfully.",
-          user: userDto,
-        };
-      }
+      // No local fallback: accounts must be created server-side.
+      return await request<AuthResponse>("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify({ name, email, password }),
+      });
     },
 
     googleLogin: async (data: { credential?: string; email?: string; name?: string; picture?: string; googleId?: string }): Promise<AuthResponse> => {
-      try {
-        return await request<AuthResponse>("/api/auth/google", {
-          method: "POST",
-          body: JSON.stringify(data),
-        });
-      } catch (err: any) {
-        console.info("[GillNet AI] Backend unavailable (" + err.message + ") — authenticating Google identity locally.");
-        let email = data.email;
-        let name = data.name;
-        let picture = data.picture;
-
-        if (data.credential) {
-          try {
-            const parts = data.credential.split(".");
-            if (parts.length >= 2) {
-              const decoded = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
-              if (decoded.email) email = decoded.email;
-              if (decoded.name) name = decoded.name;
-              if (decoded.picture) picture = decoded.picture;
-            }
-          } catch (jwtErr) {
-            console.warn("Could not decode Google token:", jwtErr);
-          }
-        }
-
-        if (!email) {
-          throw new Error("Google authentication failed: Email address was not provided.");
-        }
-
-        const normEmail = email.toLowerCase().trim();
-        const users = getLocalUsers();
-        let found = users.find((u) => u.email.toLowerCase().trim() === normEmail);
-
-        if (!found) {
-          found = {
-            id: `usr-g-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-            name: name || normEmail.split("@")[0],
-            email: normEmail,
-            picture: picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(name || normEmail)}&background=4285F4&color=fff&rounded=true`,
-            authProvider: "GOOGLE",
-            createdAt: new Date().toISOString(),
-          };
-          users.push(found);
-          saveLocalUsers(users);
-        } else {
-          if (name) found.name = name;
-          if (picture) found.picture = picture;
-          found.authProvider = "GOOGLE";
-          saveLocalUsers(users);
-        }
-
-        const userDto: UserResponseDTO = {
-          id: found.id,
-          name: found.name,
-          email: found.email,
-          picture: found.picture,
-          authProvider: "GOOGLE",
-          createdAt: found.createdAt,
-        };
-
-        return {
-          token: `gillnet_google_token_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-          message: "Authenticated via Google successfully.",
-          user: userDto,
-        };
-      }
+      // No local fallback here by design: Google identity MUST be verified
+      // server-side. A backend failure/rejection is final.
+      return await request<AuthResponse>("/api/auth/google", {
+        method: "POST",
+        body: JSON.stringify(data),
+      });
     },
 
     getProfile: async (): Promise<UserResponseDTO> => {
@@ -1122,49 +941,18 @@ export const api = {
     },
 
     forgotPassword: async (email: string): Promise<{ message: string; email?: string }> => {
-      try {
-        return await request<{ message: string; email?: string }>("/api/auth/forgot-password", {
-          method: "POST",
-          body: JSON.stringify({ email }),
-        });
-      } catch (err: any) {
-        if (err.message && !err.message.toLowerCase().includes("failed to fetch") && !err.message.toLowerCase().includes("networkerror")) {
-          throw err;
-        }
-        const users = getLocalUsers();
-        const found = users.find((u) => u.email.toLowerCase().trim() === email.toLowerCase().trim());
-        if (!found) {
-          throw new Error("No account registered with this email address.");
-        }
-        return {
-          message: "Account verified. Please enter your new password to complete the reset.",
-          email: found.email,
-        };
-      }
+      return await request<{ message: string; email?: string }>("/api/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
     },
 
     resetPassword: async (email: string, newPassword: string): Promise<{ message: string; success: boolean }> => {
-      try {
-        return await request<{ message: string; success: boolean }>("/api/auth/reset-password", {
-          method: "POST",
-          body: JSON.stringify({ email, newPassword }),
-        });
-      } catch (err: any) {
-        if (err.message && !err.message.toLowerCase().includes("failed to fetch") && !err.message.toLowerCase().includes("networkerror")) {
-          throw err;
-        }
-        const users = getLocalUsers();
-        const found = users.find((u) => u.email.toLowerCase().trim() === email.toLowerCase().trim());
-        if (!found) {
-          throw new Error("No account registered with this email address.");
-        }
-        found.password = newPassword;
-        saveLocalUsers(users);
-        return {
-          message: "Password has been successfully updated! You can now sign in with your new password.",
-          success: true,
-        };
-      }
+      // Authenticated users only — the backend enforces this. No local fallback.
+      return await request<{ message: string; success: boolean }>("/api/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify({ email, newPassword }),
+      });
     },
   },
 

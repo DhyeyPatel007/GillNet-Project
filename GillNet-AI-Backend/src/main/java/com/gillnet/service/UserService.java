@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.Base64;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -24,6 +23,8 @@ import com.gillnet.dto.RegisterRequest;
 import com.gillnet.dto.UserResponseDTO;
 import com.gillnet.model.User;
 import com.gillnet.repository.UserRepository;
+import com.gillnet.security.GoogleTokenVerifier;
+import com.gillnet.security.JwtUtils;
 
 import jakarta.annotation.PostConstruct;
 
@@ -35,15 +36,25 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final GoogleTokenVerifier googleTokenVerifier;
+    private final JwtUtils jwtUtils;
+    private final int signupCreditBonus;
     private final ObjectMapper objectMapper;
 
     // Instant-access store
     private final Map<String, User> inMemoryUsers = new ConcurrentHashMap<>();
     private volatile boolean mongoOnline = false;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository,
+                       PasswordEncoder passwordEncoder,
+                       GoogleTokenVerifier googleTokenVerifier,
+                       JwtUtils jwtUtils,
+                       @org.springframework.beans.factory.annotation.Value("${app.credits.signup-bonus:100}") int signupCreditBonus) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.googleTokenVerifier = googleTokenVerifier;
+        this.jwtUtils = jwtUtils;
+        this.signupCreditBonus = signupCreditBonus;
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
     }
@@ -53,10 +64,7 @@ public class UserService {
         // 1. Load users from durable file storage if present
         loadUsersFromFile();
 
-        // 2. Ensure default demo user exists
-        seedDefaultUser();
-
-        // 3. Connect to MongoDB asynchronously if reachable
+        // 2. Connect to MongoDB asynchronously if reachable
         CompletableFuture.runAsync(() -> {
             try {
                 userRepository.count();
@@ -76,42 +84,22 @@ public class UserService {
         });
     }
 
-    private void seedDefaultUser() {
-        String defaultEmail = "alex@gillnet.ai";
-        if (!inMemoryUsers.containsKey(defaultEmail)) {
-            User demoUser = new User();
-            demoUser.setId("usr-alex-001");
-            demoUser.setName("Alex Rivera");
-            demoUser.setEmail(defaultEmail);
-            demoUser.setPassword(passwordEncoder.encode("StrongSecurePassword123!"));
-            demoUser.setCreatedAt(LocalDateTime.now());
-            inMemoryUsers.put(defaultEmail, demoUser);
-            saveUsersToFile();
-        }
-    }
-
     private synchronized void loadUsersFromFile() {
         try {
             File file = new File(STORE_FILE);
             if (file.exists() && file.length() > 0) {
                 List<User> users = objectMapper.readValue(file, new TypeReference<List<User>>() {});
-                boolean needsSave = false;
                 for (User u : users) {
                     if (u.getEmail() != null) {
                         String emailKey = u.getEmail().toLowerCase().trim();
-                        // Fix legacy users that had passwords dropped by earlier serialization bug:
                         if (u.getPassword() == null || u.getPassword().isBlank()) {
-                            u.setPassword(passwordEncoder.encode("Password123!"));
-                            needsSave = true;
-                            log.info("Repaired missing password hash for legacy user account: {}", emailKey);
+                            // Never silently assign a known password. Force a proper reset instead.
+                            log.warn("User {} has no password hash — account locked until password is reset", emailKey);
                         }
                         inMemoryUsers.put(emailKey, u);
                     }
                 }
                 log.info("Loaded {} user accounts from {}", inMemoryUsers.size(), STORE_FILE);
-                if (needsSave) {
-                    saveUsersToFile();
-                }
             }
         } catch (Exception e) {
             log.warn("Failed to load users from {}: {}", STORE_FILE, e.getMessage());
@@ -131,45 +119,32 @@ public class UserService {
         }
     }
 
+    /**
+     * Real Google OAuth login: the ID token is cryptographically verified
+     * against Google's public keys (signature, expiry, issuer, audience).
+     * Claims are taken ONLY from the verified token — never from raw
+     * client-supplied fields.
+     */
     public UserResponseDTO loginWithGoogle(GoogleAuthRequest request) {
-        String email = null;
-        String name = null;
-        String picture = null;
-        String googleId = null;
-
-        if (request.getCredential() != null && !request.getCredential().isBlank()) {
-            try {
-                String[] parts = request.getCredential().split("\\.");
-                if (parts.length >= 2) {
-                    byte[] decoded = Base64.getUrlDecoder().decode(parts[1]);
-                    Map<String, Object> claims = objectMapper.readValue(decoded, new TypeReference<Map<String, Object>>() {});
-                    if (claims.containsKey("email")) {
-                        email = String.valueOf(claims.get("email"));
-                    }
-                    if (claims.containsKey("name")) {
-                        name = String.valueOf(claims.get("name"));
-                    }
-                    if (claims.containsKey("picture")) {
-                        picture = String.valueOf(claims.get("picture"));
-                    }
-                    if (claims.containsKey("sub")) {
-                        googleId = String.valueOf(claims.get("sub"));
-                    }
-                }
-            } catch (Exception ex) {
-                log.warn("Failed to decode Google JWT token: {}", ex.getMessage());
-            }
+        String credential = request.getCredential();
+        if (credential == null || credential.isBlank()) {
+            throw new IllegalArgumentException("Google authentication failed: missing ID token.");
         }
 
-        // Fallback to direct fields
-        if (email == null && request.getEmail() != null) email = request.getEmail();
-        if (name == null && request.getName() != null) name = request.getName();
-        if (picture == null && request.getPicture() != null) picture = request.getPicture();
-        if (googleId == null && request.getGoogleId() != null) googleId = request.getGoogleId();
-
-        if (email == null || email.trim().isEmpty()) {
-            throw new IllegalArgumentException("Google authentication failed: Email address was not provided.");
+        com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload payload =
+                googleTokenVerifier.verify(credential);
+        if (payload == null) {
+            throw new IllegalArgumentException("Google authentication failed: invalid or expired Google credential.");
         }
+
+        String email = payload.getEmail();
+        boolean emailVerified = Boolean.TRUE.equals(payload.getEmailVerified());
+        if (email == null || email.isBlank() || !emailVerified) {
+            throw new IllegalArgumentException("Google authentication failed: email not verified by Google.");
+        }
+
+        String name = (String) payload.get("name");
+        String picture = (String) payload.get("picture");
 
         String normalizedEmail = email.toLowerCase().trim();
         Optional<User> existing = findByEmail(normalizedEmail);
@@ -184,7 +159,7 @@ public class UserService {
                 user.setPicture(picture);
             }
             user.setAuthProvider("GOOGLE");
-            log.info("Existing user {} logged in via Google OAuth", normalizedEmail);
+            log.info("Existing user {} logged in via verified Google OAuth", normalizedEmail);
         } else {
             user = new User();
             user.setId(UUID.randomUUID().toString());
@@ -194,7 +169,8 @@ public class UserService {
             user.setAuthProvider("GOOGLE");
             user.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
             user.setCreatedAt(LocalDateTime.now());
-            log.info("Created new user account via Google OAuth: {}", normalizedEmail);
+            user.setCredits(signupCreditBonus);
+            log.info("Created new user account via verified Google OAuth: {} ({} signup credits)", normalizedEmail, signupCreditBonus);
         }
 
         saveUser(user);
@@ -222,6 +198,7 @@ public class UserService {
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setCreatedAt(LocalDateTime.now());
+        user.setCredits(signupCreditBonus);
 
         User savedUser = saveUser(user);
         return UserResponseDTO.fromEntity(savedUser);
@@ -240,6 +217,7 @@ public class UserService {
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setCreatedAt(LocalDateTime.now());
+        user.setCredits(signupCreditBonus);
 
         return saveUser(user);
     }
@@ -276,6 +254,57 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(newPassword));
         saveUser(user);
         log.info("Password successfully reset and updated for user {}", normalizedEmail);
+    }
+
+    /**
+     * Resolve the authenticated user from an {@code Authorization: Bearer <token>} header.
+     */
+    public Optional<User> userFromAuthHeader(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return Optional.empty();
+        }
+        String token = authHeader.substring(7);
+        if (!jwtUtils.validateToken(token)) {
+            return Optional.empty();
+        }
+        String email = jwtUtils.getEmailFromToken(token);
+        if (email == null) {
+            return Optional.empty();
+        }
+        return findByEmail(email);
+    }
+
+    /**
+     * Current credit balance. Legacy users that predate the credits system
+     * are granted the signup bonus once, lazily.
+     */
+    public synchronized int getCredits(User user) {
+        if (user.getCredits() == null) {
+            user.setCredits(signupCreditBonus);
+            saveUser(user);
+        }
+        return user.getCredits();
+    }
+
+    /**
+     * Atomically consume credits. Returns {@code false} when the balance is
+     * insufficient — the caller must then STOP the operation and tell the
+     * user they are out of credits. There is no unlimited/permanent fallback.
+     */
+    public synchronized boolean tryConsumeCredits(User user, int amount) {
+        int balance = getCredits(user);
+        if (balance < amount) {
+            return false;
+        }
+        user.setCredits(balance - amount);
+        saveUser(user);
+        return true;
+    }
+
+    public synchronized void addCredits(User user, int amount) {
+        int balance = getCredits(user);
+        user.setCredits(balance + amount);
+        saveUser(user);
     }
 
     public Optional<User> findByEmail(String email) {

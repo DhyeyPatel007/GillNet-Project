@@ -33,6 +33,7 @@ import {
   Copy,
   Check,
   ArrowUpRight,
+  Coins,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import globeImage from "@/assets/security-globe.png";
@@ -68,7 +69,7 @@ export const Route = createFileRoute("/dashboard")({
 });
 
 function DashboardPage() {
-  const { user, logout, isAuthenticated, isLoading, openAuthModal } = useAuth();
+  const { user, logout, isAuthenticated, isLoading, openAuthModal, refreshUser } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
@@ -185,6 +186,7 @@ function DashboardPage() {
       const res = await api.urlScan.analyze(val, user?.id);
       setUrlScanResult(res);
       refreshData();
+      refreshUser();
     } catch (err: any) {
       setScanError(err.message || "Failed to analyze URL. Check backend connection.");
     } finally {
@@ -232,6 +234,7 @@ function DashboardPage() {
         const res = await api.phishing.analyzeImage(phishingImageBase64, phishingImageFileName, user?.id);
         setPhishingResult(res);
         refreshData();
+        refreshUser();
       } catch (err: any) {
         setPhishingError(err.message || "Failed to analyze screenshot.");
       } finally {
@@ -247,6 +250,7 @@ function DashboardPage() {
         const res = await api.phishing.analyzeText(phishingText.trim(), user?.id);
         setPhishingResult(res);
         refreshData();
+        refreshUser();
       } catch (err: any) {
         setPhishingError(err.message || "Failed to analyze message text.");
       } finally {
@@ -492,8 +496,27 @@ function DashboardPage() {
               </div>
             </div>
 
-            {/* Right Controls: Theme Toggle & Profile Dropdown */}
+            {/* Right Controls: Credits, Theme Toggle & Profile Dropdown */}
             <div className="order-2 ml-auto flex items-center gap-3 min-[700px]:order-none">
+              {/* Credits Pill */}
+              <div
+                className={`flex items-center gap-1.5 rounded-xl border-2 px-3 py-2 text-xs font-medium shadow-sm ${
+                  (user?.credits ?? 1) <= 0
+                    ? "border-red-400 bg-red-50 text-red-700"
+                    : "border-frame bg-surface text-foreground"
+                }`}
+                title={
+                  (user?.credits ?? 1) <= 0
+                    ? "You're out of credits — top up to keep scanning"
+                    : "Scan credits remaining — each scan uses 1 credit"
+                }
+              >
+                <Coins className={`size-4 ${(user?.credits ?? 1) <= 0 ? "text-red-500" : "text-amber-500"}`} />
+                <span className="font-sans font-semibold tabular-nums">
+                  {user?.credits ?? "–"}
+                </span>
+                <span className="hidden sm:inline opacity-60">credits</span>
+              </div>
               {/* Theme Toggle Button */}
               <button
                 onClick={toggleTheme}

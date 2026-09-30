@@ -19,6 +19,7 @@ public class User {
     private String picture;
     private String authProvider; // "LOCAL" or "GOOGLE"
     private LocalDateTime createdAt;
+    private Integer credits; // usage credits; null = never initialized (granted lazily)
 
     public User() {
     }
@@ -84,5 +85,13 @@ public class User {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Integer getCredits() {
+        return credits;
+    }
+
+    public void setCredits(Integer credits) {
+        this.credits = credits;
     }
 }

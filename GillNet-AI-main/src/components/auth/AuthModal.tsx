@@ -19,31 +19,8 @@ import {
   AlertCircle,
   KeyRound,
   CheckCircle2,
-  Sparkles,
 } from "lucide-react";
 
-function GoogleIcon({ className = "size-5" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="#4285F4"
-        d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.65v3h3.88c2.27-2.09 3.665-5.17 3.665-9.09z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.26v3.09C3.25 21.36 7.33 24 12 24z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.28 14.32c-.25-.72-.38-1.49-.38-2.32 0-.83.13-1.6.38-2.32V6.59H1.26C.46 8.19 0 10.03 0 12c0 1.97.46 3.81 1.26 5.41l4.02-3.09z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.25 2.64 1.26 6.59l4.02 3.09c.95-2.83 3.6-4.93 6.72-4.93z"
-      />
-    </svg>
-  );
-}
 
 export function AuthModal() {
   const {
@@ -54,6 +31,7 @@ export function AuthModal() {
     register,
     resetPassword,
     googleLogin,
+    isAuthenticated,
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState<"login" | "register" | "forgot">("login");
@@ -61,9 +39,6 @@ export function AuthModal() {
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [googleAccountPrompt, setGoogleAccountPrompt] = useState(false);
-  const [customGoogleEmail, setCustomGoogleEmail] = useState("");
-  const [customGoogleName, setCustomGoogleName] = useState("");
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -85,7 +60,6 @@ export function AuthModal() {
     setActiveTab(authModalTab);
     setError(null);
     setSuccess(null);
-    setGoogleAccountPrompt(false);
   }, [authModalTab, isAuthModalOpen]);
 
   // Load Google Identity Services script asynchronously
@@ -99,25 +73,17 @@ export function AuthModal() {
     }
   }, []);
 
-  const executeGoogleLogin = async (email: string, name?: string, picture?: string) => {
+  const googleBtnRef = React.useRef<HTMLDivElement>(null);
+  const gisReady = React.useRef(false);
+
+  // Send the verified Google ID token to the backend. The backend
+  // cryptographically verifies it with Google before creating a session.
+  const handleGoogleCredential = async (credential: string) => {
     setError(null);
     setSuccess(null);
     setGoogleLoading(true);
-
     try {
-      const avatarUrl =
-        picture ||
-        `https://ui-avatars.com/api/?name=${encodeURIComponent(
-          name || email
-        )}&background=4285F4&color=fff&rounded=true`;
-
-      await googleLogin({
-        email,
-        name: name || email.split("@")[0],
-        picture: avatarUrl,
-        authProvider: "GOOGLE",
-      });
-
+      await googleLogin({ credential });
       closeAuthModal();
       window.location.href = "/dashboard";
     } catch (err: any) {
@@ -127,81 +93,59 @@ export function AuthModal() {
     }
   };
 
-  const handleGoogleSignInClick = async () => {
-    setError(null);
-    setSuccess(null);
-
+  // Initialize Google Identity Services: render the official Google button
+  // and trigger One Tap for the fastest sign-in.
+  const setupRealGoogleSignIn = React.useCallback((): boolean => {
     const clientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID;
     const google = (window as any).google;
+    if (!clientId || !google?.accounts?.id) return false;
 
-    // Direct Google OAuth 2.0 Token Client (Opens official Google popup)
-    if (clientId && google?.accounts?.oauth2) {
-      try {
-        setGoogleLoading(true);
-        const tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: clientId,
-          scope: "email profile openid",
-          callback: async (tokenResponse: any) => {
-            if (tokenResponse.error) {
-              setError(`Google Sign-In canceled or failed: ${tokenResponse.error}`);
-              setGoogleLoading(false);
-              return;
-            }
-            try {
-              const userInfoRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-                headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-              });
-              const userInfo = await userInfoRes.json();
-              if (userInfo?.email) {
-                await executeGoogleLogin(userInfo.email, userInfo.name, userInfo.picture);
-              } else {
-                throw new Error("Could not retrieve email from Google profile.");
-              }
-            } catch (fetchErr: any) {
-              setError(fetchErr.message || "Failed to retrieve Google profile.");
-              setGoogleLoading(false);
-            }
-          },
-        });
-        tokenClient.requestAccessToken({ prompt: "select_account" });
-        return;
-      } catch (err: any) {
-        console.warn("Google OAuth2 client error:", err);
-        setGoogleAccountPrompt(true);
-        setGoogleLoading(false);
-      }
-    } else if (clientId && google?.accounts?.id) {
-      try {
-        setGoogleLoading(true);
-        google.accounts.id.initialize({
-          client_id: clientId,
-          callback: async (response: any) => {
-            try {
-              await googleLogin({ credential: response.credential });
-              closeAuthModal();
-              window.location.href = "/dashboard";
-            } catch (err: any) {
-              setError(err.message || "Failed to authenticate with Google token.");
-              setGoogleLoading(false);
-            }
-          },
-        });
-        google.accounts.id.prompt((notification: any) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            setGoogleAccountPrompt(true);
-            setGoogleLoading(false);
-          }
-        });
-        return;
-      } catch (err) {
-        setGoogleAccountPrompt(true);
-        setGoogleLoading(false);
-      }
-    } else {
-      // Sleek Google identity sign-in interface
-      setGoogleAccountPrompt(true);
+    if (!gisReady.current) {
+      google.accounts.id.initialize({
+        client_id: clientId,
+        callback: (response: any) => {
+          if (response?.credential) handleGoogleCredential(response.credential);
+        },
+        auto_select: false,
+      });
+      gisReady.current = true;
     }
-  };
+
+    if (googleBtnRef.current) {
+      googleBtnRef.current.innerHTML = "";
+      google.accounts.id.renderButton(googleBtnRef.current, {
+        theme: "outline",
+        size: "large",
+        shape: "pill",
+        text: "continue_with",
+        logo_alignment: "left",
+        width: 350,
+      });
+    }
+    // One Tap: instant sign-in without any click when possible
+    try {
+      google.accounts.id.prompt();
+    } catch {
+      /* One Tap unavailable — the rendered button remains */
+    }
+    return true;
+  }, []);
+
+  // (Re)initialize GIS each time the modal opens so the button is always live
+  React.useEffect(() => {
+    if (!isAuthModalOpen) {
+      gisReady.current = false;
+      return;
+    }
+    let attempts = 0;
+    const timer = setInterval(() => {
+      attempts += 1;
+      if (setupRealGoogleSignIn() || attempts >= 10) {
+        clearInterval(timer);
+      }
+    }, 400);
+    return () => clearInterval(timer);
+  }, [isAuthModalOpen, setupRealGoogleSignIn]);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -259,6 +203,12 @@ export function AuthModal() {
     setError(null);
     setSuccess(null);
 
+    // Security: password changes require an active signed-in session
+    if (!isAuthenticated) {
+      setError("For your security, please sign in first — then you can change your password here.");
+      return;
+    }
+
     if (newPassword !== confirmNewPassword) {
       setError("New passwords do not match");
       return;
@@ -312,7 +262,7 @@ export function AuthModal() {
           </DialogTitle>
           <DialogDescription className="font-serif text-[14px] font-light italic text-black/70">
             {activeTab === "forgot"
-              ? "Enter your account email and choose a new secure password"
+              ? "Sign in first, then choose a new secure password"
               : "Access your AI cybersecurity suite & threat detection"}
           </DialogDescription>
         </DialogHeader>
@@ -427,165 +377,31 @@ export function AuthModal() {
               </button>
             </form>
           </div>
-        ) : googleAccountPrompt ? (
-          /* REDESIGNED AUTHENTIC GOOGLE IDENTITY SIGN-IN */
-          <div className="mt-4 space-y-4 animate-in fade-in duration-200">
-            <div className="rounded-2xl border border-black/15 bg-white/95 p-5 shadow-sm backdrop-blur-sm">
-              {/* Header Badge */}
-              <div className="flex flex-col items-center text-center pb-4 border-b border-black/10">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-xs border border-black/10 mb-2.5">
-                  <GoogleIcon className="size-6" />
-                </div>
-                <h3 className="font-serif text-[18px] font-medium text-black">
-                  Sign in with Google
-                </h3>
-                <p className="font-serif text-[13px] text-black/60 mt-0.5">
-                  Enter your original Google account credentials
-                </p>
-              </div>
-
-              {/* Dynamic Identity Preview Pill */}
-              {customGoogleEmail.trim() && (
-                <div className="mt-3.5 flex items-center gap-2.5 rounded-xl border border-blue-200 bg-blue-50/70 p-2.5 animate-in fade-in">
-                  <div className="grid size-8 place-items-center rounded-full bg-blue-600 font-sans text-xs font-semibold text-white shrink-0">
-                    {(customGoogleName || customGoogleEmail).charAt(0).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-serif text-[13px] font-medium text-blue-950 truncate">
-                      {customGoogleName || customGoogleEmail.split("@")[0]}
-                    </p>
-                    <p className="truncate font-sans text-[11px] text-blue-700/80">
-                      {customGoogleEmail}
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-blue-200/80 px-2 py-0.5 text-[10px] font-sans font-semibold text-blue-800">
-                    Original ID
-                  </span>
-                </div>
-              )}
-
-              {/* Account Input Form */}
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (customGoogleEmail.trim()) {
-                    executeGoogleLogin(customGoogleEmail.trim(), customGoogleName.trim());
-                  }
-                }}
-                className="mt-4 space-y-3"
-              >
-                <div className="space-y-1">
-                  <label className="font-serif text-[12px] font-medium text-black/80 flex items-center gap-1.5">
-                    <Mail size={13} className="text-black/50" />
-                    <span>Your Google Account Email</span>
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="your.email@gmail.com"
-                    value={customGoogleEmail}
-                    onChange={(e) => setCustomGoogleEmail(e.target.value)}
-                    className="h-10 w-full rounded-xl border border-black/20 bg-white px-3.5 font-sans text-[13px] text-black outline-none placeholder:text-black/35 focus:border-[#4285F4] focus:ring-1 focus:ring-[#4285F4] transition-all"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-serif text-[12px] font-medium text-black/80 flex items-center gap-1.5">
-                    <User size={13} className="text-black/50" />
-                    <span>Display Name (Optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. John Doe"
-                    value={customGoogleName}
-                    onChange={(e) => setCustomGoogleName(e.target.value)}
-                    className="h-10 w-full rounded-xl border border-black/20 bg-white px-3.5 font-sans text-[13px] text-black outline-none placeholder:text-black/35 focus:border-[#4285F4] focus:ring-1 focus:ring-[#4285F4] transition-all"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={googleLoading || !customGoogleEmail.trim()}
-                  className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-black font-serif text-[14px] text-white shadow-sm transition hover:bg-neutral-800 disabled:opacity-50 cursor-pointer"
-                >
-                  {googleLoading ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      <span>Verifying with Google...</span>
-                    </>
-                  ) : (
-                    <>
-                      <GoogleIcon className="size-4" />
-                      <span>Sign In with My Google ID</span>
-                    </>
-                  )}
-                </button>
-
-                <div className="relative my-2.5 flex items-center justify-center">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-black/10" />
-                  </div>
-                  <div className="relative bg-white px-2.5">
-                    <span className="font-serif text-[10px] text-black/40 uppercase tracking-wider">or instant 1-click</span>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => executeGoogleLogin("analyst.secure@gmail.com", "Security Analyst")}
-                  disabled={googleLoading}
-                  className="flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-black/15 bg-neutral-50 font-serif text-[13px] text-black hover:bg-neutral-100 transition-colors cursor-pointer"
-                >
-                  <Sparkles size={14} className="text-amber-600" />
-                  <span>1-Click Fast Sign-In (Analyst Demo)</span>
-                </button>
-              </form>
-
-              {/* Informative Note */}
-              <div className="mt-3.5 rounded-xl border border-black/10 bg-black/5 p-2.5">
-                <div className="flex items-start gap-2">
-                  <Sparkles size={14} className="text-black/60 shrink-0 mt-0.5" />
-                  <p className="font-serif text-[11px] leading-relaxed text-black/70">
-                    <strong>Zero-Config Google Identity:</strong> Sign in instantly with any Google email or use the 1-click option. (To enable the native Google popup window, add free <code>VITE_GOOGLE_CLIENT_ID</code> to your <code>.env</code> file).
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setGoogleAccountPrompt(false)}
-              className="flex items-center justify-center gap-1.5 w-full text-center font-serif text-[13px] text-black/70 hover:text-black underline cursor-pointer transition-colors"
-            >
-              <ArrowLeft size={14} />
-              <span>Back to standard sign-in options</span>
-            </button>
-          </div>
         ) : (
           /* PRIMARY GOOGLE AUTH + TABS VIEW */
           <div className="mt-4 w-full">
-            {/* PRIMARY OPTION: GOOGLE SIGN-IN BUTTON */}
-            <button
-              type="button"
-              onClick={handleGoogleSignInClick}
-              disabled={googleLoading || loading}
-              className="group relative flex h-12 w-full items-center justify-center gap-3 rounded-full border-2 border-black/15 bg-white px-5 font-serif text-[15px] font-medium text-black shadow-xs transition-all duration-200 hover:border-black hover:shadow-md hover:bg-neutral-50 active:scale-[0.99] disabled:opacity-50 cursor-pointer"
-            >
-              {googleLoading ? (
-                <>
-                  <Loader2 size={18} className="animate-spin text-black" />
-                  <span>Connecting to Google...</span>
-                </>
-              ) : (
-                <>
-                  <GoogleIcon className="size-5 transition-transform duration-200 group-hover:scale-110" />
-                  <span>Continue with Google</span>
-                  <span className="ml-1.5 rounded-full bg-emerald-100/90 px-2 py-0.5 font-sans text-[10px] font-semibold text-emerald-800 uppercase tracking-wide">
-                    Fast & Secure
-                  </span>
-                </>
-              )}
-            </button>
+            {/* REAL GOOGLE SIGN-IN: official GIS button + One Tap (fast) */}
+            {(import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ? (
+              <div className="w-full">
+                {googleLoading && (
+                  <div className="mb-2 flex items-center justify-center gap-2 font-sans text-[13px] text-black/70">
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Verifying with Google...</span>
+                  </div>
+                )}
+                <div
+                  ref={googleBtnRef}
+                  className="flex w-full justify-center overflow-hidden [&>div]:!w-full [&_iframe]:!mx-auto"
+                />
+              </div>
+            ) : (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-center font-sans text-[12px] leading-relaxed text-amber-800">
+                Google sign-in isn't configured yet. Add{" "}
+                <code className="font-mono">VITE_GOOGLE_CLIENT_ID</code> to your{" "}
+                <code className="font-mono">.env</code> and redeploy to enable
+                fast Google login.
+              </div>
+            )}
 
             {/* DIVIDER */}
             <div className="relative my-4 flex items-center justify-center">
@@ -809,7 +625,7 @@ export function AuthModal() {
 
         <div className="mt-6 border-t border-black/10 pt-4 text-center">
           <p className="font-serif text-[12px] font-light italic text-black/60">
-            Protected with Google OAuth & bcrypt hashing with end-to-end credential privacy.
+            Protected with verified Google OAuth & bcrypt hashing with end-to-end credential privacy.
           </p>
         </div>
       </DialogContent>

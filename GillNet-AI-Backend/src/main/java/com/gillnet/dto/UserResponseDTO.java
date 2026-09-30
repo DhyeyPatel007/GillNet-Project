@@ -11,17 +11,19 @@ public class UserResponseDTO {
     private String picture;
     private String authProvider;
     private LocalDateTime createdAt;
+    private Integer credits;
 
     public UserResponseDTO() {
     }
 
-    public UserResponseDTO(String id, String name, String email, String picture, String authProvider, LocalDateTime createdAt) {
+    public UserResponseDTO(String id, String name, String email, String picture, String authProvider, LocalDateTime createdAt, Integer credits) {
         this.id = id;
         this.name = name;
         this.email = email;
         this.picture = picture;
         this.authProvider = authProvider;
         this.createdAt = createdAt;
+        this.credits = credits;
     }
 
     public static UserResponseDTO fromEntity(User user) {
@@ -32,7 +34,8 @@ public class UserResponseDTO {
             user.getEmail(),
             user.getPicture(),
             user.getAuthProvider() != null ? user.getAuthProvider() : "LOCAL",
-            user.getCreatedAt()
+            user.getCreatedAt(),
+            user.getCredits() != null ? user.getCredits() : 0
         );
     }
 
@@ -82,5 +85,13 @@ public class UserResponseDTO {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Integer getCredits() {
+        return credits;
+    }
+
+    public void setCredits(Integer credits) {
+        this.credits = credits;
     }
 }

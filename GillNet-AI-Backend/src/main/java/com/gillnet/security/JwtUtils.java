@@ -2,21 +2,42 @@ package com.gillnet.security;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.util.Base64;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
 public class JwtUtils {
 
-    @Value("${app.jwt.secret:gillnet-ai-super-secret-security-key-2026-spring-boot-cybersecurity}")
-    private String jwtSecret;
+    private static final Logger log = LoggerFactory.getLogger(JwtUtils.class);
+    /** Legacy hardcoded default that was committed to the repo — must never be used. */
+    private static final String COMPROMISED_DEFAULT = "gillnet-ai-super-secret-security-key-2026-spring-boot-cybersecurity";
 
-    @Value("${app.jwt.expiration-ms:86400000}")
-    private long jwtExpirationMs;
+    private final String jwtSecret;
+    private final long jwtExpirationMs;
+
+    public JwtUtils(
+            @Value("${app.jwt.secret:}") String configuredSecret,
+            @Value("${app.jwt.expiration-ms:86400000}") long jwtExpirationMs) {
+        String secret = configuredSecret == null ? "" : configuredSecret.trim();
+        if (secret.isEmpty() || COMPROMISED_DEFAULT.equals(secret)) {
+            // Fail closed: generate a strong random secret for this process.
+            // Set the JWT_SECRET env var for stable sessions across restarts.
+            byte[] random = new byte[32];
+            new SecureRandom().nextBytes(random);
+            secret = Base64.getUrlEncoder().withoutPadding().encodeToString(random);
+            log.warn("JWT_SECRET is not set (or uses the compromised default) — generated a random session secret. "
+                    + "All users will be logged out on restart. Set the JWT_SECRET environment variable for persistence.");
+        }
+        this.jwtSecret = secret;
+        this.jwtExpirationMs = jwtExpirationMs;
+    }
 
     public String generateToken(String email, String userId) {
         long now = System.currentTimeMillis();

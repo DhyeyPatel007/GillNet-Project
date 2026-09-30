@@ -83,19 +83,32 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        Optional<User> userOpt = userService.findByEmail(request.getEmail());
-        if (userOpt.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("message", "No account registered with this email address."));
-        }
+        // Always return the same message — never reveal whether an account exists.
+        // Password changes require an authenticated session (see /reset-password).
         return ResponseEntity.ok(Map.of(
-            "message", "Account found. Please enter your new password to complete the reset.",
-            "email", request.getEmail()
+            "message", "If an account exists for this email, sign in and use the in-app password change option."
         ));
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+    public ResponseEntity<?> resetPassword(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @Valid @RequestBody ResetPasswordRequest request) {
+        // Secure: only an authenticated user can change their OWN password.
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Please sign in to change your password."));
+        }
+        String token = authHeader.substring(7);
+        if (!jwtUtils.validateToken(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Session expired. Please sign in again."));
+        }
+        String tokenEmail = jwtUtils.getEmailFromToken(token);
+        if (tokenEmail == null || !tokenEmail.equalsIgnoreCase(request.getEmail())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "You can only change the password of your own account."));
+        }
         try {
             userService.resetPassword(request.getEmail(), request.getNewPassword());
             return ResponseEntity.ok(Map.of(

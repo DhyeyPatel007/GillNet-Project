@@ -12,6 +12,7 @@ interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<void>;
   googleLogin: (data: { credential?: string; email?: string; name?: string; picture?: string; googleId?: string }) => Promise<void>;
   resetPassword: (email: string, newPassword: string) => Promise<string>;
+  refreshUser: () => Promise<void>;
   logout: () => void;
   openAuthModal: (tab?: "login" | "register" | "forgot") => void;
   closeAuthModal: () => void;
@@ -114,6 +115,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem(USER_KEY);
   };
 
+  const refreshUser = async () => {
+    try {
+      const profile = await api.auth.getProfile();
+      setUser(profile);
+      localStorage.setItem(USER_KEY, JSON.stringify(profile));
+    } catch {
+      // keep existing user on failure (e.g. backend offline)
+    }
+  };
+
   const openAuthModal = (tab: "login" | "register" | "forgot" = "login") => {
     setAuthModalTab(tab);
     setIsAuthModalOpen(true);
@@ -136,6 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         register,
         googleLogin,
         resetPassword,
+        refreshUser,
         logout,
         openAuthModal,
         closeAuthModal,
@@ -157,6 +169,7 @@ const defaultAuthContext: AuthContextType = {
   register: async () => {},
   googleLogin: async () => {},
   resetPassword: async () => "",
+  refreshUser: async () => {},
   logout: () => {},
   openAuthModal: () => {},
   closeAuthModal: () => {},
