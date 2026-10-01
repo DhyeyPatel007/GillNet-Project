@@ -1,73 +1,45 @@
-# GillNet End-to-End Verification Report
-**Date:** 2026-10-01 ~00:35 IST (user asleep; work done overnight as requested)
+# GillNet Verification Report
+**Date:** 2026-10-01 ~10:00 IST
 **Repo:** https://github.com/DhyeyPatel007/GillNet-Project.git
+**Deployed commit:** `c2c8c84` (pushed to `main`; Render auto-deployed)
 
-## What was fixed (code, committed locally as `bb183bb`)
+## What changed in this pass
 
-1. **Black "Verifying Security Clearance..." screen — FIXED in code.** The app blocked the whole UI on a backend profile fetch (which hangs while Render wakes). Now the cached session renders instantly and the profile refreshes silently in the background. TypeScript clean, production build passes.
-2. **Google OAuth client ID** is now a built-in default in both the frontend sign-in button and the backend verifier (env vars `VITE_GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_ID` still override it). Verified present in the production bundle along with the Google Identity Services script; all fake-auth code confirmed absent.
-3. **Sign-in modal** always renders the real Google button now (removed the dead "not configured" warning).
+1. **URL scanner retuned (v4 weights)** in `UrlScanService.java` — suspicious-TLD list, shortener domains, brand-impersonation, free-hosting, base64-path signals.
+2. **Text scanner rebuilt** in `PhishingScanService.java` — expanded lure/urgency/credential-harvest/premium-rate/shortcode signals + an embedded 1,632-word Naive Bayes spam model used as a tiebreaker (score ≥ 25 escalates weak-signal messages).
+3. **Screenshot tab repaired** — the backend now accepts the frontend OCR `extractedText` and classifies it with the text engine. The filename is context only. With no OCR text the service returns an explicit low-confidence coverage-gap verdict instead of inventing pixel/visual-inspection claims.
+4. **Chat UI added** — floating `ChatAssistant` widget mounted on the dashboard, wired to `/api/chat`.
+5. **10 new unit tests** for scanner behavior. Backend suite: **25/25 pass.**
 
-Backend: all **15/15 tests pass** with these changes.
+## Measured accuracy (Java engine, labeled held-out data — not curated samples)
 
-## Accuracy measurements (real numbers, no guessing)
+| Engine | Dataset | Accuracy | Precision | Recall |
+|---|---|---|---|---|
+| URL v4 | 20,000 labeled URLs (`phishing_20k_real.csv`; label −1 = phishing) | **98.97%** | 98.82% | 99.11% |
+| Text hybrid | 2,574 held-out SMS (UCI SMS Spam Collection, split seed 42; tune/held-out separated before threshold selection) | **97.67%** | 99.67% | 83.66% |
 
-| Component | Result |
+The text threshold (NB ≥ 25) was chosen on the 3,000-message tune split (98.50%, zero false positives there) and measured on the untouched held-out split. A lower threshold (NB ≥ 18) reached 99.1% on tune but only 98.0% on held-out with 5 false positives, so it was rejected — precision matters more than squeezing the headline number.
+
+## Live production tests — 2026-10-01 ~10:00 IST (`gillnet-backend-recovery.onrender.com`, deployed build)
+
+| Check | Result |
 |---|---|
-| Python URL model `phishing_url_model.pkl` (what `app.py` loads) | **BROKEN — 50.0%** on 20,000 labeled URLs. The model file contains only one class, so it predicts "safe" for everything. Its `url_model_info.pkl` claim of 96.45% is false for the serialized artifact. |
-| `url_model.pkl` (spare file) | Unusable — trained on a different feature set (`HTTPS_token` vs `SSLfinal_State`). |
-| **Java heuristic engine (what actually serves users today**, since the Python ML service is not deployed on Render) | **95.1% accuracy, 98.8% precision, 91.7% recall** on 5,000 labeled URLs. Genuinely solid. |
-| Email phishing model | Claims 96.8% in its metadata file — **not independently verified** (no labeled email dataset on hand). Treat as unverified. |
+| Text tab `/api/phishing/analyze-text` (same 20-case set the dashboard uses) | **19/20 (95.0%)** — was 75% before this pass. One miss: legit subscription-renewal notice flagged SUSPICIOUS. |
+| URL `/api/url/analyze` (5 probes: 2 phishing, 3 legit) | **5/5 correct** |
+| Screenshot `/api/phishing/analyze-image` (4 behavioral cases) | **4/4 correct**: OCR phishing text → PHISHING (verdict follows text, not filename); OCR benign text + sensitive filename → SAFE; no OCR + sensitive filename → SUSPICIOUS with explicit "No on-screen text" coverage gap; no OCR + benign filename → SAFE low-confidence. No false visual-inspection claims anywhere. |
+| Password `/api/password/analyze` | Sensible: `Tr0ub4dor&3xY9!qW` → VERY_STRONG 100; `password123` → WEAK 10; `correct horse battery staple` → GOOD 55 |
+| Chat `/api/chat` | Correct OTP-scam advice; 1 credit deducted (73 → 72) |
+| Credits | Register → 100; scans deduct exactly 1; failed scans don't charge (verified in prior pass) |
 
-### Live per-tool accuracy test — 2026-10-01 ~09:35 IST (production API, `gillnet-backend-recovery.onrender.com`)
+## Honest gaps against the 99% target
 
-Every tool was hit live with 10 genuine + 10 malicious inputs through the same endpoints the UI calls. Raw results: `accuracy-results.json`.
+- **URL: 98.97%** — within measurement noise of 99%, but strictly under it.
+- **Text: 97.67%** — short of 99%. Reaching 99% on real-world SMS spam needs a properly trained ML model, not a heuristic+NB hybrid; that is a bigger project than this pass.
+- **Screenshot without OCR text** is low-confidence filename triage by design — it cannot be 99% and doesn't claim to be.
 
-| Tool | Test | Result |
-|---|---|---|
-| **URL scanner** (`/api/url/analyze`) | 10 legit + 10 phishing URLs, seeded random sample from the labeled 20k dataset | **95.0% accuracy** (19/20). Precision 100%, recall 90%. Only miss: an ADFS login phish (`18upz.com/attrr/adfs/index.html`) scored SAFE — the heuristic didn't flag the short-domain + `/adfs/` pattern. |
-| **Message/email scanner** (`/api/message/analyze`) | 10 genuine + 10 real-world phishing lures (PayPal/Apple/bank-OTP/lottery/CEO-gift-card/IRS/crypto-seed-phrase etc.) | **85.0% accuracy** (17/20). Precision 88.9%, recall 80%. 3 misses: (1) legit "password was successfully changed" notification flagged SCAM — the word "password" alone adds +35; (2)(3) two prize-scam lures scored SAFE because each keyword category only counts its first hit (`break` after first match), so "won $2.5M" + "wire transfer" together still only scored 35. Method note: messages were hand-picked real-world examples, so this is indicative, not a formal benchmark. |
-| **Password strength meter** (`/api/password/analyze`) | 10 weak (`123456`, `password`, …) + 10 strong (20-char random w/ symbols) | **100% sensible labeling** (20/20). All weak → WEAK/FAIR (8 common-password hits flagged), all strong → GOOD/VERY_STRONG. Not classification accuracy per se — the meter is an estimator — but every label matched the input class. |
-| **Chat assistant** (`/api/chat`) | 1 security question ("How can I tell if an email asking for my bank OTP is a scam?") | Responded correctly (200, category SCAM) with sound advice — never share OTPs, banks never ask. Generative, so no accuracy % applies. |
+## Still open (needs your hands)
 
-**Takeaway:** the URL scanner is production-grade (95%, consistent with the earlier 5k-URL measurement). The message scanner is decent (85%) but keyword-bound: it misses multi-signal phishing that stays under the per-category cap and false-positives on legit security notifications containing the word "password". Both weaknesses are fixable in the heuristic (accumulate keyword hits instead of `break`-ing; don't treat the bare word "password" in a *confirmation* as a credential-harvest signal).
-
-### Per-tool accuracy, dashboard endpoints — 2026-10-01 ~09:50 IST (the endpoints the UI actually calls)
-
-The dashboard's Phishing Scanner has two tabs that call **different** backend endpoints than the `/api/message/analyze` tested above. Raw results: `accuracy-phishing.json`.
-
-| UI tool | Endpoint hit | 10 genuine + 10 malicious | Result |
-|---|---|---|---|
-| Link Scanner | `/api/url/analyze` | 10 legit + 10 phishing URLs (seeded sample, labeled 20k set) | **95.0%** (19/20) |
-| Phishing Scanner → **Text** tab | `/api/phishing/analyze-text` | same 20 message texts | **75.0%** (15/20). Zero false positives (10/10 legit → SAFE) but recall only 50%: missed the lottery, CEO-gift-card, bank-OTP, cash-prize and parcel-redelivery lures. This endpoint runs a *different, weaker* heuristic than `/api/message/analyze` (which scored 85% on the same texts). |
-| Phishing Scanner → **Screenshot** tab | `/api/phishing/analyze-image` | 20 rendered screenshots (10 genuine + 10 phishing message images) with realistic OS filenames (`Screenshot 2026-10-01 at 09.4x.xx.png`) | **50.0%** (10/20) — every upload scored SAFE regardless of content. **Root cause:** the deployed image heuristic never performs OCR and never inspects pixels; the verdict is derived from the **filename** alone (`paypal`/`login`/`bank` in the name → SUSPICIOUS; `phish`/`scam`/`fake` → PHISHING; `timetable`/`schedule`/`safe` → SAFE; anything else → SAFE). Proven by probes: identical phishing pixels named `paypal-login-screenshot.png` → SUSPICIOUS (45), `timetable-class-schedule.png` → SAFE (0). The `extractedText` the frontend's Tesseract.js OCR sends is silently dropped (no such field in the backend DTO). A real user upload (OS-style filename) can therefore never be flagged by content. |
-| Password strength meter | `/api/password/analyze` | 10 weak + 10 strong | **100%** sensible labels (20/20) |
-| Chat assistant | `/api/chat` | 1 security question | Works (correct OTP-scam advice). **No chatbot UI exists in the frontend** — the API function is wired in `api.ts` but no component/route renders it, so users never see the option. |
-
-**Net:** of the tools users can actually click, the URL scanner is strong, the text tab is mediocre (75%), and the screenshot tab is decorative — its verdicts come from filenames, not image content. Fixing it properly means either wiring the frontend's `extractedText` through to the backend classifier or deploying the Python ML OCR service the code already tries to call.
-
-## Live deployment status (checked 2026-10-01 ~00:30 IST)
-
-| Site | Status |
-|---|---|
-| Render frontend (`gillnet-frontend.onrender.com`) | **UP** (200, ~0.6s). Landing page renders beautifully, no layout bugs. |
-| Render backend (`gillnet-backend.onrender.com`) | **DOWN — boot-crash loop.** Observed ~15 min: Render's "Application loading" screen cycles with "STEADY HANDS… ALMOST LIVE" messages and never serves traffic. The Spring Boot service appears to crash during boot or never bind its port. Check Render logs. |
-| Vercel (`gillnet-ai.vercel.app`) | **UP** (200) but still serving the **old landing-page bundle**, not the app. |
-
-## UI audit findings (live visual inspection, 2026-10-01)
-
-- Landing page: clean, polished, no visual bugs on either frontend host.
-- Sign-in modal BUG A: production shows "Google sign-in isn't configured yet. Add VITE_GOOGLE_CLIENT_ID to your .env and redeploy" — **already fixed in code** (commit `bb183bb`: built-in client-ID default renders the real Google button). Fix is local-only until push.
-- Sign-in modal BUG B: password input painted as a solid black bar while the email input rendered light (identical classes; Chrome UA/autofill quirk on `type="password"`). **Fixed in code** (commit `8864420`: explicit light background + `color-scheme: light` + autofill neutralization for all password inputs). Fix is local-only until push.
-
-## Blockers that need you (I cannot do these)
-
-1. **Git push failed — no GitHub login.** Commit `bb183bb` (black-screen fix + OAuth defaults) is ready locally but not on GitHub, so Render/Vercel haven't picked it up. I need you to authenticate GitHub (or push it yourself: `cd ~/workspace/gillnet-project && git push origin main` won't work without auth — use your own machine).
-2. **Render backend is down.** Check the Render dashboard — the service may have crashed, failed to deploy, or been suspended.
-3. **Production secrets are not in the repo** (correctly). Set these in the Render dashboard: `GOOGLE_CLIENT_ID`, `JWT_SECRET`, `SPRING_DATA_MONGODB_URI` (no real MongoDB Atlas URI exists anywhere in the code — only a localhost default — so the backend currently has no database to talk to). Frontend needs `VITE_GOOGLE_CLIENT_ID` and `VITE_API_URL=https://gillnet-backend.onrender.com`.
-4. **Google Cloud OAuth:** authorize `https://gillnet-frontend.onrender.com` and `https://gillnet-ai.vercel.app` as origins for the client ID, or Google will refuse the login.
-5. Once the above are done I can run the true end-to-end test: real Google login → 100 credits → paid scan deducts 1 → 402 at zero.
-
-## Honest status
-
-Not "100% working" yet. The code fixes are done, tested, and committed; the accuracy of the live scanner is verified good (95%). But the backend is down and the new commit isn't deployed — both need your hands. Nothing here was faked: every number above was measured, and every blocker is real.
+1. **Atlas cleanup:** delete test users `retest-1790824786@gillnet.test`, `accuracy-*`, `accuracy2-*`, `msgdbg-*`, `livetest-*`, `tok2-*` at `@gillnet.test` via Atlas Data Explorer (VM DNS can't reach Atlas directly).
+2. **Rotate secrets:** Atlas DB password and `JWT_SECRET` in the Render dashboard (old values appeared in task history). Then redeploy + retest.
+3. **Google login:** add both frontend origins in Google Cloud console, then do one real tap-to-login on the live site.
+4. Revoke the old GitHub PAT from 2026-09-30; `gh auth logout` was for the VM session.
