@@ -90,7 +90,10 @@ public class UserService {
                 saveUsersToFile();
             } catch (Exception e) {
                 mongoOnline = false;
-                log.info("MongoDB not reachable — operating with durable file-backed storage ({} users active)", inMemoryUsers.size());
+                // Log the cause (never includes credentials — driver exceptions
+                // describe auth/network/timeout failures, not secrets).
+                log.warn("MongoDB not reachable — operating with durable file-backed storage ({} users active). Cause: {}",
+                        inMemoryUsers.size(), e.toString());
             }
         });
     }
