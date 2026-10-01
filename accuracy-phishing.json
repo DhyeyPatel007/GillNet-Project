@@ -1,0 +1,323 @@
+{
+ "phish_text": [
+  {
+   "msg": "IT Department: your password expires today. Click here to retain your current password: http://intranet-password-reset.pw/keep",
+   "truth": "PHISH",
+   "level": "PHISHING",
+   "score": 90,
+   "ok": true
+  },
+  {
+   "msg": "Thanks for subscribing to our newsletter! Here are this week's top stories in cybersecurity.",
+   "truth": "LEGIT",
+   "level": "SAFE",
+   "score": 10,
+   "ok": true
+  },
+  {
+   "msg": "You are eligible for a tax refund of $1,284. Submit your bank details within 48 hours to receive it: http://irs-refund-claim.top/apply",
+   "truth": "PHISH",
+   "level": "PHISHING",
+   "score": 90,
+   "ok": true
+  },
+  {
+   "msg": "Your flight AI-202 check-in is now open. Boarding begins 45 minutes before departure. Please keep your ID ready.",
+   "truth": "LEGIT",
+   "level": "SAFE",
+   "score": 10,
+   "ok": true
+  },
+  {
+   "msg": "Happy birthday! Hope you have a wonderful day. Dinner is on me this weekend. - Rahul",
+   "truth": "LEGIT",
+   "level": "SAFE",
+   "score": 10,
+   "ok": true
+  },
+  {
+   "msg": "CONGRATULATIONS! You have won $2,500,000 in the Global Lottery draw. Pay a $250 processing fee by wire transfer to claim your prize.",
+   "truth": "PHISH",
+   "level": "SAFE",
+   "score": 10,
+   "ok": false
+  },
+  {
+   "msg": "Hi, this is your CEO. I am stuck in meetings all day. Please buy five $100 gift cards, scratch the backs, and text me photos of the codes. This is urgent.",
+   "truth": "PHISH",
+   "level": "SAFE",
+   "score": 25,
+   "ok": false
+  },
+  {
+   "msg": "Security Alert: your crypto wallet will be deactivated in 12 hours. Enter your 12-word seed phrase at http://wallet-verify-online.xyz/restore to keep access.",
+   "truth": "PHISH",
+   "level": "PHISHING",
+   "score": 100,
+   "ok": true
+  },
+  {
+   "msg": "Your password was successfully changed. If you did not make this change, please contact support immediately.",
+   "truth": "LEGIT",
+   "level": "SAFE",
+   "score": 25,
+   "ok": true
+  },
+  {
+   "msg": "Dear customer, your bank account will be blocked today. To keep it active, please share the OTP you receive with our support agent on this call.",
+   "truth": "PHISH",
+   "level": "SAFE",
+   "score": 25,
+   "ok": false
+  },
+  {
+   "msg": "You have been selected to receive a $5,000 cash prize! Claim your prize now by paying a small $49 verification fee.",
+   "truth": "PHISH",
+   "level": "SAFE",
+   "score": 10,
+   "ok": false
+  },
+  {
+   "msg": "Your PayPal account has been limited due to unusual activity. Verify your identity within 24 hours or it will be permanently suspended: http://paypal-verify-login.tk/signin",
+   "truth": "PHISH",
+   "level": "PHISHING",
+   "score": 100,
+   "ok": true
+  },
+  {
+   "msg": "Reminder: Your dentist appointment is tomorrow at 10:30 AM. Reply YES to confirm or call us to reschedule.",
+   "truth": "LEGIT",
+   "level": "SAFE",
+   "score": 0,
+   "ok": true
+  },
+  {
+   "msg": "We detected unauthorized access to your Apple ID and your account has been locked. Verify immediately: bit.ly/verify-apple",
+   "truth": "PHISH",
+   "level": "SUSPICIOUS",
+   "score": 60,
+   "ok": true
+  },
+  {
+   "msg": "Your monthly bank statement for September is now available. Log in to your mobile banking app to view it.",
+   "truth": "LEGIT",
+   "level": "SAFE",
+   "score": 10,
+   "ok": true
+  },
+  {
+   "msg": "Your parcel could not be delivered. A redelivery fee of $2.99 is required: https://dhl-express-delivery.club/pay",
+   "truth": "PHISH",
+   "level": "SAFE",
+   "score": 30,
+   "ok": false
+  },
+  {
+   "msg": "Your subscription renews on October 15 at $9.99 per month. You can manage or cancel anytime in your account settings.",
+   "truth": "LEGIT",
+   "level": "SAFE",
+   "score": 10,
+   "ok": true
+  },
+  {
+   "msg": "The package you ordered has shipped and will arrive on Thursday. You can follow its journey in the delivery app.",
+   "truth": "LEGIT",
+   "level": "SAFE",
+   "score": 10,
+   "ok": true
+  },
+  {
+   "msg": "Hi Priya, I'll be home for dinner on Sunday. Can you pick up some milk on your way? Love, Mom",
+   "truth": "LEGIT",
+   "level": "SAFE",
+   "score": 10,
+   "ok": true
+  },
+  {
+   "msg": "Meeting rescheduled: the project sync has moved to Thursday at 3 PM in Conference Room B. The agenda is attached.",
+   "truth": "LEGIT",
+   "level": "SAFE",
+   "score": 0,
+   "ok": true
+  }
+ ],
+ "phish_image": [
+  {
+   "truth": "PHISH",
+   "file": "Screenshot 2026-10-01 at 09.40.00.png",
+   "level": "SAFE",
+   "score": 10,
+   "extractedTextEcho": false,
+   "ok": false
+  },
+  {
+   "truth": "LEGIT",
+   "file": "Screenshot 2026-10-01 at 09.41.07.png",
+   "level": "SAFE",
+   "score": 10,
+   "extractedTextEcho": false,
+   "ok": true
+  },
+  {
+   "truth": "PHISH",
+   "file": "Screenshot 2026-10-01 at 09.42.14.png",
+   "level": "SAFE",
+   "score": 10,
+   "extractedTextEcho": false,
+   "ok": false
+  },
+  {
+   "truth": "LEGIT",
+   "file": "Screenshot 2026-10-01 at 09.43.21.png",
+   "level": "SAFE",
+   "score": 10,
+   "extractedTextEcho": false,
+   "ok": true
+  },
+  {
+   "truth": "LEGIT",
+   "file": "Screenshot 2026-10-01 at 09.44.28.png",
+   "level": "SAFE",
+   "score": 10,
+   "extractedTextEcho": false,
+   "ok": true
+  },
+  {
+   "truth": "PHISH",
+   "file": "Screenshot 2026-10-01 at 09.45.35.png",
+   "level": "SAFE",
+   "score": 10,
+   "extractedTextEcho": false,
+   "ok": false
+  },
+  {
+   "truth": "PHISH",
+   "file": "Screenshot 2026-10-01 at 09.46.42.png",
+   "level": "SAFE",
+   "score": 10,
+   "extractedTextEcho": false,
+   "ok": false
+  },
+  {
+   "truth": "PHISH",
+   "file": "Screenshot 2026-10-01 at 09.47.49.png",
+   "level": "SAFE",
+   "score": 10,
+   "extractedTextEcho": false,
+   "ok": false
+  },
+  {
+   "truth": "LEGIT",
+   "file": "Screenshot 2026-10-01 at 09.48.56.png",
+   "level": "SAFE",
+   "score": 10,
+   "extractedTextEcho": false,
+   "ok": true
+  },
+  {
+   "truth": "PHISH",
+   "file": "Screenshot 2026-10-01 at 09.49.03.png",
+   "level": "SAFE",
+   "score": 10,
+   "extractedTextEcho": false,
+   "ok": false
+  },
+  {
+   "truth": "PHISH",
+   "file": "Screenshot 2026-10-01 at 09.50.10.png",
+   "level": "SAFE",
+   "score": 10,
+   "extractedTextEcho": false,
+   "ok": false
+  },
+  {
+   "truth": "PHISH",
+   "file": "Screenshot 2026-10-01 at 09.51.17.png",
+   "level": "SAFE",
+   "score": 10,
+   "extractedTextEcho": false,
+   "ok": false
+  },
+  {
+   "truth": "LEGIT",
+   "file": "Screenshot 2026-10-01 at 09.52.24.png",
+   "level": "SAFE",
+   "score": 10,
+   "extractedTextEcho": false,
+   "ok": true
+  },
+  {
+   "truth": "PHISH",
+   "file": "Screenshot 2026-10-01 at 09.53.31.png",
+   "level": "SAFE",
+   "score": 10,
+   "extractedTextEcho": false,
+   "ok": false
+  },
+  {
+   "truth": "LEGIT",
+   "file": "Screenshot 2026-10-01 at 09.54.38.png",
+   "level": "SAFE",
+   "score": 10,
+   "extractedTextEcho": false,
+   "ok": true
+  },
+  {
+   "truth": "PHISH",
+   "file": "Screenshot 2026-10-01 at 09.55.45.png",
+   "level": "SAFE",
+   "score": 10,
+   "extractedTextEcho": false,
+   "ok": false
+  },
+  {
+   "truth": "LEGIT",
+   "file": "Screenshot 2026-10-01 at 09.56.52.png",
+   "level": "SAFE",
+   "score": 10,
+   "extractedTextEcho": false,
+   "ok": true
+  },
+  {
+   "truth": "LEGIT",
+   "file": "Screenshot 2026-10-01 at 09.57.59.png",
+   "level": "SAFE",
+   "score": 10,
+   "extractedTextEcho": false,
+   "ok": true
+  },
+  {
+   "truth": "LEGIT",
+   "file": "Screenshot 2026-10-01 at 09.58.06.png",
+   "level": "SAFE",
+   "score": 10,
+   "extractedTextEcho": false,
+   "ok": true
+  },
+  {
+   "truth": "LEGIT",
+   "file": "Screenshot 2026-10-01 at 09.59.13.png",
+   "level": "SAFE",
+   "score": 10,
+   "extractedTextEcho": false,
+   "ok": true
+  }
+ ],
+ "probes": [
+  {
+   "file": "paypal-login-screenshot.png",
+   "level": "SUSPICIOUS",
+   "score": 45
+  },
+  {
+   "file": "timetable-class-schedule.png",
+   "level": "SAFE",
+   "score": 0
+  },
+  {
+   "file": "Screenshot 2026-10-01 at 10.00.00.png",
+   "level": "SAFE",
+   "score": 10
+  }
+ ]
+}

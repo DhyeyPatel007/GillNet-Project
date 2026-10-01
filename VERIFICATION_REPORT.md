@@ -32,6 +32,20 @@ Every tool was hit live with 10 genuine + 10 malicious inputs through the same e
 
 **Takeaway:** the URL scanner is production-grade (95%, consistent with the earlier 5k-URL measurement). The message scanner is decent (85%) but keyword-bound: it misses multi-signal phishing that stays under the per-category cap and false-positives on legit security notifications containing the word "password". Both weaknesses are fixable in the heuristic (accumulate keyword hits instead of `break`-ing; don't treat the bare word "password" in a *confirmation* as a credential-harvest signal).
 
+### Per-tool accuracy, dashboard endpoints — 2026-10-01 ~09:50 IST (the endpoints the UI actually calls)
+
+The dashboard's Phishing Scanner has two tabs that call **different** backend endpoints than the `/api/message/analyze` tested above. Raw results: `accuracy-phishing.json`.
+
+| UI tool | Endpoint hit | 10 genuine + 10 malicious | Result |
+|---|---|---|---|
+| Link Scanner | `/api/url/analyze` | 10 legit + 10 phishing URLs (seeded sample, labeled 20k set) | **95.0%** (19/20) |
+| Phishing Scanner → **Text** tab | `/api/phishing/analyze-text` | same 20 message texts | **75.0%** (15/20). Zero false positives (10/10 legit → SAFE) but recall only 50%: missed the lottery, CEO-gift-card, bank-OTP, cash-prize and parcel-redelivery lures. This endpoint runs a *different, weaker* heuristic than `/api/message/analyze` (which scored 85% on the same texts). |
+| Phishing Scanner → **Screenshot** tab | `/api/phishing/analyze-image` | 20 rendered screenshots (10 genuine + 10 phishing message images) with realistic OS filenames (`Screenshot 2026-10-01 at 09.4x.xx.png`) | **50.0%** (10/20) — every upload scored SAFE regardless of content. **Root cause:** the deployed image heuristic never performs OCR and never inspects pixels; the verdict is derived from the **filename** alone (`paypal`/`login`/`bank` in the name → SUSPICIOUS; `phish`/`scam`/`fake` → PHISHING; `timetable`/`schedule`/`safe` → SAFE; anything else → SAFE). Proven by probes: identical phishing pixels named `paypal-login-screenshot.png` → SUSPICIOUS (45), `timetable-class-schedule.png` → SAFE (0). The `extractedText` the frontend's Tesseract.js OCR sends is silently dropped (no such field in the backend DTO). A real user upload (OS-style filename) can therefore never be flagged by content. |
+| Password strength meter | `/api/password/analyze` | 10 weak + 10 strong | **100%** sensible labels (20/20) |
+| Chat assistant | `/api/chat` | 1 security question | Works (correct OTP-scam advice). **No chatbot UI exists in the frontend** — the API function is wired in `api.ts` but no component/route renders it, so users never see the option. |
+
+**Net:** of the tools users can actually click, the URL scanner is strong, the text tab is mediocre (75%), and the screenshot tab is decorative — its verdicts come from filenames, not image content. Fixing it properly means either wiring the frontend's `extractedText` through to the backend classifier or deploying the Python ML OCR service the code already tries to call.
+
 ## Live deployment status (checked 2026-10-01 ~00:30 IST)
 
 | Site | Status |
