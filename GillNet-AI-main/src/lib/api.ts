@@ -120,7 +120,7 @@ function getApiBaseUrl(): string {
   // frontend used a relative `/api` URL, which sent requests to the static
   // frontend host instead of Render and made every API call appear broken.
   // Deployments can still override this stable default through VITE_API_URL.
-  return "https://gillnet-backend.onrender.com";
+  return "https://gillnet-backend-recovery.onrender.com";
 }
 
 function getAuthHeader(): Record<string, string> {
