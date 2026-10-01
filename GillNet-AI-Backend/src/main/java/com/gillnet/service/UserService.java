@@ -40,6 +40,7 @@ public class UserService {
     private final JwtUtils jwtUtils;
     private final int signupCreditBonus;
     private final ObjectMapper objectMapper;
+    private final String resolvedMongoUri;
 
     // Instant-access store
     private final Map<String, User> inMemoryUsers = new ConcurrentHashMap<>();
@@ -49,18 +50,28 @@ public class UserService {
                        PasswordEncoder passwordEncoder,
                        GoogleTokenVerifier googleTokenVerifier,
                        JwtUtils jwtUtils,
-                       @org.springframework.beans.factory.annotation.Value("${app.credits.signup-bonus:100}") int signupCreditBonus) {
+                       @org.springframework.beans.factory.annotation.Value("${app.credits.signup-bonus:100}") int signupCreditBonus,
+                       @org.springframework.beans.factory.annotation.Value("${spring.data.mongodb.uri:}") String resolvedMongoUri) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.googleTokenVerifier = googleTokenVerifier;
         this.jwtUtils = jwtUtils;
         this.signupCreditBonus = signupCreditBonus;
+        this.resolvedMongoUri = resolvedMongoUri == null ? "" : resolvedMongoUri;
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
     }
 
     @PostConstruct
     public void init() {
+        // 0. Diagnostic: does the process actually see the Mongo env var, and what
+        //    URI did Spring resolve? Credentials are never logged — only the host.
+        boolean mongoEnvPresent = System.getenv("SPRING_DATA_MONGODB_URI") != null;
+        log.info("MONGO DIAG — SPRING_DATA_MONGODB_URI present in process env: {}", mongoEnvPresent);
+        // Never log credentials: keep only scheme + host.
+        String maskedUri = resolvedMongoUri.replaceAll("://[^@]*@", "://***@");
+        log.info("MONGO DIAG — resolved spring.data.mongodb.uri: {}", maskedUri.isEmpty() ? "<empty>" : maskedUri);
+
         // 1. Load users from durable file storage if present
         loadUsersFromFile();
 
