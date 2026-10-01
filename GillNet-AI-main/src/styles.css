@@ -391,17 +391,36 @@
 /* Password fields: force the light theme explicitly. Chrome's UA stylesheet
    and password-manager autofill can otherwise paint type="password" inputs
    with a dark/opaque background (seen as a solid black bar in the sign-in
-   modal), even when sibling inputs render light. */
-input[type="password"] {
+   modal), even when sibling inputs render light.
+   Scoped to non-dashboard contexts: inside the dashboard the password field
+   follows the theme instead — the global light override painted it as a
+   solid gray bar in dark mode. */
+:not(.dashboard-container) input[type="password"] {
   background-color: rgb(255 255 255 / 0.65);
   color-scheme: light;
 }
-input[type="password"]:-webkit-autofill,
-input[type="password"]:-webkit-autofill:hover,
-input[type="password"]:-webkit-autofill:focus,
-input[type="password"]:-webkit-autofill:active {
+:not(.dashboard-container) input[type="password"]:-webkit-autofill,
+:not(.dashboard-container) input[type="password"]:-webkit-autofill:hover,
+:not(.dashboard-container) input[type="password"]:-webkit-autofill:focus,
+:not(.dashboard-container) input[type="password"]:-webkit-autofill:active {
   -webkit-text-fill-color: #000;
   -webkit-box-shadow: 0 0 0 1000px rgb(255 255 255 / 0.65) inset;
+  transition: background-color 9999s ease-in-out 0s;
+}
+/* Dashboard password field respects the active theme. */
+.dashboard-container input[type="password"] {
+  background-color: transparent;
+  color-scheme: dark;
+}
+.dashboard-container.dashboard-light input[type="password"] {
+  color-scheme: light;
+}
+.dashboard-container.dashboard-dark input[type="password"]:-webkit-autofill,
+.dashboard-container.dashboard-dark input[type="password"]:-webkit-autofill:hover,
+.dashboard-container.dashboard-dark input[type="password"]:-webkit-autofill:focus,
+.dashboard-container.dashboard-dark input[type="password"]:-webkit-autofill:active {
+  -webkit-text-fill-color: #F3F3E3;
+  -webkit-box-shadow: 0 0 0 1000px rgb(0 0 0 / 0.85) inset;
   transition: background-color 9999s ease-in-out 0s;
 }
 

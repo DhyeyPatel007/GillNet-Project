@@ -606,7 +606,11 @@ function DashboardPage() {
                   <img
                     src={globeImage}
                     alt="Digital security globe"
-                    className="h-full w-full object-cover object-right opacity-85 mix-blend-screen"
+                    className={`h-full w-full object-cover object-right opacity-85 ${
+                      theme === "dark"
+                        ? "mix-blend-screen"
+                        : "invert mix-blend-multiply"
+                    }`}
                   />
                 </div>
               </section>
