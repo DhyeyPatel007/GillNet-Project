@@ -134,7 +134,9 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   const url = baseUrl ? `${baseUrl}${endpoint}` : endpoint;
 
   const controller = new AbortController();
-  const timeoutMs = 8000;
+  // Free-tier backends can cold-start for 20-60s; aborting at 8s used to
+  // surface Chromium's cryptic "signal is aborted without reason" in the UI.
+  const timeoutMs = 30000;
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   const headers = {
@@ -170,6 +172,12 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     return text ? JSON.parse(text) : ({} as T);
   } catch (err: any) {
     clearTimeout(timeoutId);
+    // Translate the browser's cryptic abort message into something actionable.
+    if (err?.name === "AbortError") {
+      throw new Error(
+        "The server is taking too long to respond (it may be waking up). Please wait a few seconds and try again."
+      );
+    }
     throw err;
   }
 }
