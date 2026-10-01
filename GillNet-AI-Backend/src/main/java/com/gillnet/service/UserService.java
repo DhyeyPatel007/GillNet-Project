@@ -197,6 +197,7 @@ public class UserService {
             }
             user.setAuthProvider("GOOGLE");
             log.info("Existing user {} logged in via verified Google OAuth", normalizedEmail);
+            ensureCreditsInitialized(user);
         } else {
             user = new User();
             user.setId(UUID.randomUUID().toString());
@@ -223,6 +224,7 @@ public class UserService {
             // If the returning user enters their existing correct password, allow them to log in smoothly!
             if (passwordEncoder.matches(request.getPassword(), user.getPassword())) {
                 log.info("Returning user {} authenticated via register/signup flow", email);
+                ensureCreditsInitialized(user);
                 return UserResponseDTO.fromEntity(user);
             } else {
                 throw new IllegalArgumentException("An account with this email already exists. Please sign in with your password.");
@@ -267,6 +269,7 @@ public class UserService {
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             if (passwordEncoder.matches(rawPassword, user.getPassword())) {
+                ensureCreditsInitialized(user);
                 return Optional.of(user);
             }
         }
@@ -321,6 +324,19 @@ public class UserService {
             saveUser(user);
         }
         return user.getCredits();
+    }
+
+    /**
+     * Ensure a user loaded from storage has a credit balance. Users created
+     * before the credits system have no credits field — they receive the
+     * signup bonus once, the first time their profile is read.
+     */
+    public User ensureCreditsInitialized(User user) {
+        if (user != null && user.getCredits() == null) {
+            getCredits(user); // lazy grant + persist
+            log.info("Granted {} signup credits to legacy user {}", signupCreditBonus, user.getEmail());
+        }
+        return user;
     }
 
     /**

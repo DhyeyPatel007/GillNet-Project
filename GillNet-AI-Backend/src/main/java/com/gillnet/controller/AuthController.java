@@ -144,7 +144,7 @@ public class AuthController {
         }
 
         return userService.findByEmail(email)
-                .map(u -> ResponseEntity.ok(UserResponseDTO.fromEntity(u)))
+                .map(u -> ResponseEntity.ok(UserResponseDTO.fromEntity(userService.ensureCreditsInitialized(u))))
                 .orElse(ResponseEntity.notFound().build());
     }
 }
