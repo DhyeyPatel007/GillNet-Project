@@ -43,3 +43,11 @@ The text threshold (NB ≥ 25) was chosen on the 3,000-message tune split (98.50
 2. **Rotate secrets:** Atlas DB password and `JWT_SECRET` in the Render dashboard (old values appeared in task history). Then redeploy + retest.
 3. **Google login:** add both frontend origins in Google Cloud console, then do one real tap-to-login on the live site.
 4. Revoke the old GitHub PAT from 2026-09-30; `gh auth logout` was for the VM session.
+
+## Live browser accuracy test — 2026-10-01 ~10:15 IST
+- Ran 60 cases against production (Vercel frontend UI for URL + Text; screenshot endpoint via API with OCR-equivalent text, since the browser automation could not target the hidden file input).
+- URL scanner (real UI): **20/20** — 10/10 phishing (incl. IP-hosted bank lures) PHISHING, 10/10 legit SAFE.
+- Text tab (real UI): **19/20** — 9/10 spam caught (mix of PHISHING/SUSPICIOUS), 10/10 ham SAFE. One miss: "XXXMobileMovieClub" premium-rate lure scored SAFE (10/100).
+- Screenshot tab (same /api/phishing/analyze-image endpoint the UI calls, extractedText as the frontend's Tesseract would produce): **20/20** — 10/10 phishing-text images PHISHING (risk 47–100), 10/10 benign-text images SAFE (risk 0–10).
+- Combined: **59/60 = 98.3%**.
+- Finding: the Screenshot tab's "click to browse" drop zone did not open a file chooser on click in automation — possible frontend UX issue worth a manual click-test.

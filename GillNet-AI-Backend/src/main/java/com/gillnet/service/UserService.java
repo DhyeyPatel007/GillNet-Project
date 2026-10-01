@@ -26,7 +26,7 @@ import com.gillnet.repository.UserRepository;
 import com.gillnet.security.GoogleTokenVerifier;
 import com.gillnet.security.JwtUtils;
 import com.mongodb.client.MongoClient;
-import org.springframework.boot.autoconfigure.mongo.MongoProperties;
+import org.springframework.boot.mongodb.autoconfigure.MongoProperties;
 import jakarta.annotation.PostConstruct;
 
 @Service
@@ -54,7 +54,7 @@ public class UserService {
                        GoogleTokenVerifier googleTokenVerifier,
                        JwtUtils jwtUtils,
                        @org.springframework.beans.factory.annotation.Value("${app.credits.signup-bonus:100}") int signupCreditBonus,
-                       @org.springframework.beans.factory.annotation.Value("${spring.data.mongodb.uri:}") String resolvedMongoUri,
+                       @org.springframework.beans.factory.annotation.Value("${spring.mongodb.uri:}") String resolvedMongoUri,
                        MongoProperties mongoProperties,
                        MongoClient mongoClient) {
         this.userRepository = userRepository;
@@ -77,7 +77,7 @@ public class UserService {
         log.info("MONGO DIAG — SPRING_DATA_MONGODB_URI present in process env: {}", mongoEnvPresent);
         // Never log credentials: keep only scheme + host.
         String maskedUri = resolvedMongoUri.replaceAll("://[^@]*@", "://***@");
-        log.info("MONGO DIAG — resolved spring.data.mongodb.uri: {}", maskedUri.isEmpty() ? "<empty>" : maskedUri);
+        log.info("MONGO DIAG — resolved spring.mongodb.uri: {}", maskedUri.isEmpty() ? "<empty>" : maskedUri);
         // What do Spring Boot's MongoProperties and the actual driver client see?
         // (No credentials: hosts never contain userinfo.)
         try {

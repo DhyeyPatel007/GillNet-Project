@@ -1,0 +1,26 @@
+{
+ "phish_urls": [
+  "http://165.22.42.241/directing/www.atbonline.com/atb/complete.html",
+  "http://450019357384648.xxdazbvqvqyzgkvu.sepa-00980-force-drop.oa.r.appspot.com/?fbclid=iwar0lkoqzx5tnhi_ut-5wza_qr25vg_nupjd4fll_awla5_yc8dgmqztr1rq",
+  "http://93.118.34.58/finance/tang",
+  "http://43.153.192.86/servicelogin?continue=https://accounts.google.com/?&dsh=s-217974694:1681894867230796&flowentry=servicelogin&followup=https://accounts.google.com/?&ifkv=aqmjq7so1utse7nhpv3meewlmqhouwvkjq40lqwfu6n8ysm2t3ignj1yu43mexzz4f9g7_cdqept&nojavascript=1",
+  "http://34.65.39.168/pj/device/inicio/05/aplicationtoken3_webapp.php?brazil=07,44,08,am,147,5,05,000000,28,7,2019,tuesday.dll",
+  "http://34.65.39.168/pj/device/inicio/02/aplicationtoken2_webapp.php?brazil=01,54,13,am,146,5,05,000000,27,1,2019,monday.dll",
+  "http://72.21.211.176/buffalo-classic-usb-gamepad-pc/product-reviews/b002b9xb0e",
+  "http://173.232.146.137/banks/cibc/accountconfirm.php",
+  "http://110.78.211.49/smss/16010000/modules/budget/ameli/assurance/remboursement/service",
+  "http://157.245.102.177/banks/atb/business.html"
+ ],
+ "legit_urls": [
+  "https://teamviewer.com/solutions?tab=overview",
+  "https://advmusic.com/solutions?lang=en",
+  "https://support.prismaaccess.com/news",
+  "https://educationportal3.in/careers",
+  "https://cam4.com/about?sort=popular",
+  "https://real.com/careers?ref=homepage",
+  "https://www.czbooks.net/features?ref=homepage",
+  "http://timeout.com/contact",
+  "https://api.ifood.com.br/news",
+  "https://tpbid.com/news"
+ ]
+}

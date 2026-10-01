@@ -1,0 +1,142 @@
+[
+ {
+  "kind": "phish",
+  "n": 1,
+  "threatLevel": "PHISHING",
+  "riskScore": 100,
+  "ok": true
+ },
+ {
+  "kind": "phish",
+  "n": 2,
+  "threatLevel": "PHISHING",
+  "riskScore": 47,
+  "ok": true
+ },
+ {
+  "kind": "phish",
+  "n": 3,
+  "threatLevel": "PHISHING",
+  "riskScore": 100,
+  "ok": true
+ },
+ {
+  "kind": "phish",
+  "n": 4,
+  "threatLevel": "PHISHING",
+  "riskScore": 90,
+  "ok": true
+ },
+ {
+  "kind": "phish",
+  "n": 5,
+  "threatLevel": "PHISHING",
+  "riskScore": 100,
+  "ok": true
+ },
+ {
+  "kind": "phish",
+  "n": 6,
+  "threatLevel": "PHISHING",
+  "riskScore": 100,
+  "ok": true
+ },
+ {
+  "kind": "phish",
+  "n": 7,
+  "threatLevel": "PHISHING",
+  "riskScore": 100,
+  "ok": true
+ },
+ {
+  "kind": "phish",
+  "n": 8,
+  "threatLevel": "PHISHING",
+  "riskScore": 100,
+  "ok": true
+ },
+ {
+  "kind": "phish",
+  "n": 9,
+  "threatLevel": "PHISHING",
+  "riskScore": 100,
+  "ok": true
+ },
+ {
+  "kind": "phish",
+  "n": 10,
+  "threatLevel": "PHISHING",
+  "riskScore": 100,
+  "ok": true
+ },
+ {
+  "kind": "legit",
+  "n": 1,
+  "threatLevel": "SAFE",
+  "riskScore": 10,
+  "ok": true
+ },
+ {
+  "kind": "legit",
+  "n": 2,
+  "threatLevel": "SAFE",
+  "riskScore": 0,
+  "ok": true
+ },
+ {
+  "kind": "legit",
+  "n": 3,
+  "threatLevel": "SAFE",
+  "riskScore": 10,
+  "ok": true
+ },
+ {
+  "kind": "legit",
+  "n": 4,
+  "threatLevel": "SAFE",
+  "riskScore": 10,
+  "ok": true
+ },
+ {
+  "kind": "legit",
+  "n": 5,
+  "threatLevel": "SAFE",
+  "riskScore": 10,
+  "ok": true
+ },
+ {
+  "kind": "legit",
+  "n": 6,
+  "threatLevel": "SAFE",
+  "riskScore": 10,
+  "ok": true
+ },
+ {
+  "kind": "legit",
+  "n": 7,
+  "threatLevel": "SAFE",
+  "riskScore": 10,
+  "ok": true
+ },
+ {
+  "kind": "legit",
+  "n": 8,
+  "threatLevel": "SAFE",
+  "riskScore": 10,
+  "ok": true
+ },
+ {
+  "kind": "legit",
+  "n": 9,
+  "threatLevel": "SAFE",
+  "riskScore": 0,
+  "ok": true
+ },
+ {
+  "kind": "legit",
+  "n": 10,
+  "threatLevel": "SAFE",
+  "riskScore": 10,
+  "ok": true
+ }
+]
