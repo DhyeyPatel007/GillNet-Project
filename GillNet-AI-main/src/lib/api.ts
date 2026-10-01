@@ -84,6 +84,30 @@ export interface PhishingScanResult {
   extractedText?: string;
 }
 
+/**
+ * Defensive normalization: guarantees every list field the dashboard renders
+ * is an actual array. A malformed backend payload (or an empty 200 body)
+ * must never crash the result view — the page-level error boundary would
+ * otherwise replace the whole dashboard with "This page didn't load".
+ */
+export function normalizePhishingResult(res: any): PhishingScanResult {
+  const r = res && typeof res === "object" ? res : {};
+  const asList = (v: any): string[] => (Array.isArray(v) ? v.map(String) : []);
+  return {
+    threatLevel: typeof r.threatLevel === "string" ? r.threatLevel : "SUSPICIOUS",
+    riskScore: typeof r.riskScore === "number" ? r.riskScore : 50,
+    confidence: typeof r.confidence === "number" ? r.confidence : 50,
+    summary: typeof r.summary === "string" ? r.summary : "Analysis completed.",
+    brandImpersonated: typeof r.brandImpersonated === "string" ? r.brandImpersonated : "None Detected",
+    credentialHarvesting: r.credentialHarvesting === true,
+    urgencyTactics: asList(r.urgencyTactics),
+    extractedUrls: asList(r.extractedUrls),
+    indicators: asList(r.indicators),
+    recommendations: asList(r.recommendations),
+    extractedText: typeof r.extractedText === "string" ? r.extractedText : undefined,
+  };
+}
+
 export interface ChatResponse {
   reply: string;
   suggestions: string[];
@@ -1037,7 +1061,7 @@ export const api = {
           threat_level: res.threatLevel,
           risk_score: res.riskScore,
         }).catch(() => {});
-        return res;
+        return normalizePhishingResult(res);
       } catch (err: any) {
         console.info("[GillNet AI] Evaluating text via local semantic threat engine.");
         const scanRes = evaluatePhishingContent(content);
@@ -1050,7 +1074,7 @@ export const api = {
           features: { url_count: scanRes.extractedUrls?.length || 0 },
         }).catch(() => {});
 
-        return scanRes;
+        return normalizePhishingResult(scanRes);
       }
     },
 
@@ -1091,7 +1115,7 @@ export const api = {
           risk_score: res.riskScore,
           features: { ocr_detected: !!res.extractedText },
         }).catch(() => {});
-        return res;
+        return normalizePhishingResult(res);
       } catch (err: any) {
         console.info("[GillNet AI] Evaluating screenshot locally using extracted OCR text.");
         const scanRes = evaluatePhishingContent(extractedOcrText, fileName);
@@ -1104,7 +1128,7 @@ export const api = {
           features: { ocr_detected: !!scanRes.extractedText },
         }).catch(() => {});
 
-        return scanRes;
+        return normalizePhishingResult(scanRes);
       }
     },
   },

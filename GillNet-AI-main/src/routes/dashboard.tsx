@@ -1133,7 +1133,7 @@ function DashboardPage() {
                     )}
 
                     {/* Detected Indicators & Why Flagged */}
-                    {phishingResult.indicators.length > 0 && (
+                    {(phishingResult.indicators ?? []).length > 0 && (
                       <div className="space-y-2 text-xs">
                         <p className="font-semibold text-bright flex items-center gap-1.5">
                           {phishingResult.threatLevel === "PHISHING" ? (
@@ -1141,10 +1141,10 @@ function DashboardPage() {
                           ) : (
                             <ShieldAlert className="size-3.5 text-warning" />
                           )}
-                          Why This Was Flagged ({phishingResult.indicators.length} Threat Indicators):
+                          Why This Was Flagged ({(phishingResult.indicators ?? []).length} Threat Indicators):
                         </p>
                         <ul className="space-y-1.5">
-                          {phishingResult.indicators.map((ind, i) => {
+                          {(phishingResult.indicators ?? []).map((ind, i) => {
                             const tagMatch = ind.match(/^\[(.*?)\]\s*(.*)$/);
                             const categoryTag = tagMatch ? tagMatch[1] : null;
                             const reasonText = tagMatch ? tagMatch[2] : ind;
@@ -1186,11 +1186,11 @@ function DashboardPage() {
                     )}
 
                     {/* Actionable Recommendations */}
-                    {phishingResult.recommendations.length > 0 && (
+                    {(phishingResult.recommendations ?? []).length > 0 && (
                       <div className="space-y-1.5 text-xs border-t border-frame/30 pt-2.5">
                         <p className="font-semibold text-safe">Actionable Defense Steps:</p>
                         <ul className="space-y-1 text-muted-foreground">
-                          {phishingResult.recommendations.map((rec, i) => (
+                          {(phishingResult.recommendations ?? []).map((rec, i) => (
                             <li key={i} className="flex items-start gap-2">
                               <CheckCircle2 className="size-3.5 text-safe mt-0.5 shrink-0" />
                               <span>{rec}</span>
