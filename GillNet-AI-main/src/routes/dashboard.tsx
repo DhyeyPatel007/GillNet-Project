@@ -34,6 +34,7 @@ import {
   Check,
   ArrowUpRight,
   Coins,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChatAssistant from "@/components/ChatAssistant";
