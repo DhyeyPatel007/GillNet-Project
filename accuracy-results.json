@@ -1,0 +1,597 @@
+{
+ "url": [
+  {
+   "url": "http://1chanel.tv-tovar.in.ua/azexcel.zip",
+   "truth": "PHISH",
+   "pred": "PHISHING",
+   "ok": true,
+   "status": 200
+  },
+  {
+   "url": "https://jhu.edu/community?lang=en",
+   "truth": "LEGIT",
+   "pred": "SAFE",
+   "ok": true,
+   "status": 200
+  },
+  {
+   "url": "https://myshopify.com/overview?lang=en",
+   "truth": "LEGIT",
+   "pred": "SAFE",
+   "ok": true,
+   "status": 200
+  },
+  {
+   "url": "http://a0566391.xsph.ru/we.quote.spec.download.6c0143e8f5a6b66aef8/we/",
+   "truth": "PHISH",
+   "pred": "PHISHING",
+   "ok": true,
+   "status": 200
+  },
+  {
+   "url": "http://101.99.90.132/banks/desjardins/26f2a5212ec13d0e036172fb7e4cb5d5",
+   "truth": "PHISH",
+   "pred": "PHISHING",
+   "ok": true,
+   "status": 200
+  },
+  {
+   "url": "http://18upz.com/attrr/adfs/index.html",
+   "truth": "PHISH",
+   "pred": "SAFE",
+   "ok": false,
+   "status": 200
+  },
+  {
+   "url": "https://gzone.ph/faq",
+   "truth": "LEGIT",
+   "pred": "SAFE",
+   "ok": true,
+   "status": 200
+  },
+  {
+   "url": "http://45.9.148.185/mxenlineav1",
+   "truth": "PHISH",
+   "pred": "PHISHING",
+   "ok": true,
+   "status": 200
+  },
+  {
+   "url": "https://sevilmusics.com/support",
+   "truth": "LEGIT",
+   "pred": "SAFE",
+   "ok": true,
+   "status": 200
+  },
+  {
+   "url": "http://43.159.41.87/v3/signin/identifier?dsh=s-284950170:1679418267715",
+   "truth": "PHISH",
+   "pred": "PHISHING",
+   "ok": true,
+   "status": 200
+  },
+  {
+   "url": "https://ctmail.com/pricing?ref=homepage",
+   "truth": "LEGIT",
+   "pred": "SAFE",
+   "ok": true,
+   "status": 200
+  },
+  {
+   "url": "https://palmplaystore.com/resources?tab=overview",
+   "truth": "LEGIT",
+   "pred": "SAFE",
+   "ok": true,
+   "status": 200
+  },
+  {
+   "url": "http://365online-newupdat-review.com/login.php",
+   "truth": "PHISH",
+   "pred": "PHISHING",
+   "ok": true,
+   "status": 200
+  },
+  {
+   "url": "https://alipay.com/services?tab=overview",
+   "truth": "LEGIT",
+   "pred": "SAFE",
+   "ok": true,
+   "status": 200
+  },
+  {
+   "url": "https://ravelry.com/home",
+   "truth": "LEGIT",
+   "pred": "SAFE",
+   "ok": true,
+   "status": 200
+  },
+  {
+   "url": "http://52.229.67.174/finance/bmo-mobile",
+   "truth": "PHISH",
+   "pred": "PHISHING",
+   "ok": true,
+   "status": 200
+  },
+  {
+   "url": "https://blog.ipredictive.com/support?query=search&type=all",
+   "truth": "LEGIT",
+   "pred": "SAFE",
+   "ok": true,
+   "status": 200
+  },
+  {
+   "url": "http://40.66.48.99/banks/scotia/confirm.html",
+   "truth": "PHISH",
+   "pred": "PHISHING",
+   "ok": true,
+   "status": 200
+  },
+  {
+   "url": "http://174.138.111.159/banks/atb/business.html",
+   "truth": "PHISH",
+   "pred": "PHISHING",
+   "ok": true,
+   "status": 200
+  },
+  {
+   "url": "https://google.com.gt/careers?ref=homepage",
+   "truth": "LEGIT",
+   "pred": "SAFE",
+   "ok": true,
+   "status": 200
+  }
+ ],
+ "message": [
+  {
+   "msg": "IT Department: your password expires today. Click here to retain your current password: http://intranet-password-reset.pw/keep",
+   "truth": "PHISH",
+   "class": "SCAM",
+   "score": 70,
+   "indicators": [
+    "[Credential Harvesting Vector] Sensitive Authentication Secret: Explicit request for confidential authentication data ('password'). Legitimate entities never request passwords or OTPs via text.",
+    "[Embedded Destination Threat] Unverified External Hyperlink: Contains external link or shortened redirect commonly utilized in credential phishing campaigns."
+   ],
+   "ok": true,
+   "status": 200
+  },
+  {
+   "msg": "Thanks for subscribing to our newsletter! Here are this week's top stories in cybersecurity.",
+   "truth": "LEGIT",
+   "class": "SAFE",
+   "score": 10,
+   "indicators": [
+    "[Tone & Integrity] Neutral conversational syntax with zero credential harvesting vectors.",
+    "[Infrastructure] Absence of deceptive links or obfuscated redirect patterns."
+   ],
+   "ok": true,
+   "status": 200
+  },
+  {
+   "msg": "You are eligible for a tax refund of $1,284. Submit your bank details within 48 hours to receive it: http://irs-refund-claim.top/apply",
+   "truth": "PHISH",
+   "class": "SCAM",
+   "score": 80,
+   "indicators": [
+    "[Financial Bait] Advance Fee / Reward Trap: Unrealistic monetary promise or prize notification ('refund') intended to extract personal funds or data.",
+    "[Brand & Entity Impersonation] Authority Pretence: Claims representation of prominent brand or agency ('bank') to establish unearned credibility.",
+    "[Embedded Destination Threat] Unverified External Hyperlink: Contains external link or shortened redirect commonly utilized in credential phishing campaigns."
+   ],
+   "ok": true,
+   "status": 200
+  },
+  {
+   "msg": "Your flight AI-202 check-in is now open. Boarding begins 45 minutes before departure. Please keep your ID ready.",
+   "truth": "LEGIT",
+   "class": "SAFE",
+   "score": 10,
+   "indicators": [
+    "[Tone & Integrity] Neutral conversational syntax with zero credential harvesting vectors.",
+    "[Infrastructure] Absence of deceptive links or obfuscated redirect patterns."
+   ],
+   "ok": true,
+   "status": 200
+  },
+  {
+   "msg": "Happy birthday! Hope you have a wonderful day. Dinner is on me this weekend. - Rahul",
+   "truth": "LEGIT",
+   "class": "SAFE",
+   "score": 35,
+   "indicators": [
+    "[Financial Bait] Advance Fee / Reward Trap: Unrealistic monetary promise or prize notification ('won') intended to extract personal funds or data."
+   ],
+   "ok": true,
+   "status": 200
+  },
+  {
+   "msg": "CONGRATULATIONS! You have won $2,500,000 in the Global Lottery draw. Pay a $250 processing fee by wire transfer to claim your prize.",
+   "truth": "PHISH",
+   "class": "SAFE",
+   "score": 35,
+   "indicators": [
+    "[Financial Bait] Advance Fee / Reward Trap: Unrealistic monetary promise or prize notification ('lottery') intended to extract personal funds or data."
+   ],
+   "ok": false,
+   "status": 200
+  },
+  {
+   "msg": "Hi, this is your CEO. I am stuck in meetings all day. Please buy five $100 gift cards, scratch the backs, and text me photos of the codes. This is urgent.",
+   "truth": "PHISH",
+   "class": "SUSPICIOUS",
+   "score": 60,
+   "indicators": [
+    "[Psychological Urgency Tactic] High Pressure Coercion: Message uses artificial time urgency ('urgent') to force immediate, unconsidered action.",
+    "[Financial Bait] Advance Fee / Reward Trap: Unrealistic monetary promise or prize notification ('gift card') intended to extract personal funds or data."
+   ],
+   "ok": true,
+   "status": 200
+  },
+  {
+   "msg": "Security Alert: your crypto wallet will be deactivated in 12 hours. Enter your 12-word seed phrase at http://wallet-verify-online.xyz/restore to keep access.",
+   "truth": "PHISH",
+   "class": "SCAM",
+   "score": 100,
+   "indicators": [
+    "[Psychological Urgency Tactic] High Pressure Coercion: Message uses artificial time urgency ('deactivated') to force immediate, unconsidered action.",
+    "[Credential Harvesting Vector] Sensitive Authentication Secret: Explicit request for confidential authentication data ('seed phrase'). Legitimate entities never request passwords or OTPs via text.",
+    "[Financial Bait] Advance Fee / Reward Trap: Unrealistic monetary promise or prize notification ('crypto') intended to extract personal funds or data.",
+    "[Embedded Destination Threat] Unverified External Hyperlink: Contains external link or shortened redirect commonly utilized in credential phishing campaigns."
+   ],
+   "ok": true,
+   "status": 200
+  },
+  {
+   "msg": "Your password was successfully changed. If you did not make this change, please contact support immediately.",
+   "truth": "LEGIT",
+   "class": "SCAM",
+   "score": 70,
+   "indicators": [
+    "[Psychological Urgency Tactic] High Pressure Coercion: Message uses artificial time urgency ('immediately') to force immediate, unconsidered action.",
+    "[Credential Harvesting Vector] Sensitive Authentication Secret: Explicit request for confidential authentication data ('password'). Legitimate entities never request passwords or OTPs via text."
+   ],
+   "ok": false,
+   "status": 200
+  },
+  {
+   "msg": "Dear customer, your bank account will be blocked today. To keep it active, please share the OTP you receive with our support agent on this call.",
+   "truth": "PHISH",
+   "class": "SCAM",
+   "score": 90,
+   "indicators": [
+    "[Psychological Urgency Tactic] High Pressure Coercion: Message uses artificial time urgency ('blocked') to force immediate, unconsidered action.",
+    "[Credential Harvesting Vector] Sensitive Authentication Secret: Explicit request for confidential authentication data ('otp'). Legitimate entities never request passwords or OTPs via text.",
+    "[Brand & Entity Impersonation] Authority Pretence: Claims representation of prominent brand or agency ('bank') to establish unearned credibility."
+   ],
+   "ok": true,
+   "status": 200
+  },
+  {
+   "msg": "You have been selected to receive a $5,000 cash prize! Claim your prize now by paying a small $49 verification fee.",
+   "truth": "PHISH",
+   "class": "SAFE",
+   "score": 35,
+   "indicators": [
+    "[Financial Bait] Advance Fee / Reward Trap: Unrealistic monetary promise or prize notification ('cash prize') intended to extract personal funds or data."
+   ],
+   "ok": false,
+   "status": 200
+  },
+  {
+   "msg": "Your PayPal account has been limited due to unusual activity. Verify your identity within 24 hours or it will be permanently suspended: http://paypal-verify-login.tk/signin",
+   "truth": "PHISH",
+   "class": "SCAM",
+   "score": 80,
+   "indicators": [
+    "[Psychological Urgency Tactic] High Pressure Coercion: Message uses artificial time urgency ('within 24 hours') to force immediate, unconsidered action.",
+    "[Brand & Entity Impersonation] Authority Pretence: Claims representation of prominent brand or agency ('paypal') to establish unearned credibility.",
+    "[Embedded Destination Threat] Unverified External Hyperlink: Contains external link or shortened redirect commonly utilized in credential phishing campaigns."
+   ],
+   "ok": true,
+   "status": 200
+  },
+  {
+   "msg": "Reminder: Your dentist appointment is tomorrow at 10:30 AM. Reply YES to confirm or call us to reschedule.",
+   "truth": "LEGIT",
+   "class": "SAFE",
+   "score": 10,
+   "indicators": [
+    "[Tone & Integrity] Neutral conversational syntax with zero credential harvesting vectors.",
+    "[Infrastructure] Absence of deceptive links or obfuscated redirect patterns."
+   ],
+   "ok": true,
+   "status": 200
+  },
+  {
+   "msg": "We detected unauthorized access to your Apple ID and your account has been locked. Verify immediately: bit.ly/verify-apple",
+   "truth": "PHISH",
+   "class": "SUSPICIOUS",
+   "score": 60,
+   "indicators": [
+    "[Psychological Urgency Tactic] High Pressure Coercion: Message uses artificial time urgency ('immediately') to force immediate, unconsidered action.",
+    "[Embedded Destination Threat] Unverified External Hyperlink: Contains external link or shortened redirect commonly utilized in credential phishing campaigns."
+   ],
+   "ok": true,
+   "status": 200
+  },
+  {
+   "msg": "Your monthly bank statement for September is now available. Log in to your mobile banking app to view it.",
+   "truth": "LEGIT",
+   "class": "SAFE",
+   "score": 30,
+   "indicators": [
+    "[Brand & Entity Impersonation] Authority Pretence: Claims representation of prominent brand or agency ('bank') to establish unearned credibility."
+   ],
+   "ok": true,
+   "status": 200
+  },
+  {
+   "msg": "Your parcel could not be delivered. A redelivery fee of $2.99 is required: https://dhl-express-delivery.club/pay",
+   "truth": "PHISH",
+   "class": "SUSPICIOUS",
+   "score": 55,
+   "indicators": [
+    "[Brand & Entity Impersonation] Authority Pretence: Claims representation of prominent brand or agency ('dhl') to establish unearned credibility.",
+    "[Embedded Destination Threat] Unverified External Hyperlink: Contains external link or shortened redirect commonly utilized in credential phishing campaigns."
+   ],
+   "ok": true,
+   "status": 200
+  },
+  {
+   "msg": "Your subscription renews on October 15 at $9.99 per month. You can manage or cancel anytime in your account settings.",
+   "truth": "LEGIT",
+   "class": "SAFE",
+   "score": 10,
+   "indicators": [
+    "[Tone & Integrity] Neutral conversational syntax with zero credential harvesting vectors.",
+    "[Infrastructure] Absence of deceptive links or obfuscated redirect patterns."
+   ],
+   "ok": true,
+   "status": 200
+  },
+  {
+   "msg": "The package you ordered has shipped and will arrive on Thursday. You can follow its journey in the delivery app.",
+   "truth": "LEGIT",
+   "class": "SAFE",
+   "score": 10,
+   "indicators": [
+    "[Tone & Integrity] Neutral conversational syntax with zero credential harvesting vectors.",
+    "[Infrastructure] Absence of deceptive links or obfuscated redirect patterns."
+   ],
+   "ok": true,
+   "status": 200
+  },
+  {
+   "msg": "Hi Priya, I'll be home for dinner on Sunday. Can you pick up some milk on your way? Love, Mom",
+   "truth": "LEGIT",
+   "class": "SAFE",
+   "score": 10,
+   "indicators": [
+    "[Tone & Integrity] Neutral conversational syntax with zero credential harvesting vectors.",
+    "[Infrastructure] Absence of deceptive links or obfuscated redirect patterns."
+   ],
+   "ok": true,
+   "status": 200
+  },
+  {
+   "msg": "Meeting rescheduled: the project sync has moved to Thursday at 3 PM in Conference Room B. The agenda is attached.",
+   "truth": "LEGIT",
+   "class": "SAFE",
+   "score": 10,
+   "indicators": [
+    "[Tone & Integrity] Neutral conversational syntax with zero credential harvesting vectors.",
+    "[Infrastructure] Absence of deceptive links or obfuscated redirect patterns."
+   ],
+   "ok": true,
+   "status": 200
+  }
+ ],
+ "password": [
+  {
+   "pw": "123456",
+   "truth": "WEAK",
+   "strength": "WEAK",
+   "score": 5,
+   "entropy": 15.51,
+   "crack": "Instantly / Seconds (Compromised by online or offline botnets)",
+   "isCommon": true,
+   "ok": true
+  },
+  {
+   "pw": "password",
+   "truth": "WEAK",
+   "strength": "WEAK",
+   "score": 10,
+   "entropy": 22.0,
+   "crack": "Instantly / Seconds (Compromised by online or offline botnets)",
+   "isCommon": true,
+   "ok": true
+  },
+  {
+   "pw": "qwerty",
+   "truth": "WEAK",
+   "strength": "WEAK",
+   "score": 0,
+   "entropy": 15.51,
+   "crack": "Instantly / Seconds (Compromised by online or offline botnets)",
+   "isCommon": true,
+   "ok": true
+  },
+  {
+   "pw": "letmein",
+   "truth": "WEAK",
+   "strength": "WEAK",
+   "score": 5,
+   "entropy": 17.65,
+   "crack": "Instantly / Seconds (Compromised by online or offline botnets)",
+   "isCommon": true,
+   "ok": true
+  },
+  {
+   "pw": "abc123",
+   "truth": "WEAK",
+   "strength": "WEAK",
+   "score": 20,
+   "entropy": 15.51,
+   "crack": "Instantly / Seconds (Compromised by online or offline botnets)",
+   "isCommon": false,
+   "ok": true
+  },
+  {
+   "pw": "111111",
+   "truth": "WEAK",
+   "strength": "WEAK",
+   "score": 10,
+   "entropy": 0.0,
+   "crack": "Instantly / Seconds (Compromised by online or offline botnets)",
+   "isCommon": true,
+   "ok": true
+  },
+  {
+   "pw": "dragon",
+   "truth": "WEAK",
+   "strength": "WEAK",
+   "score": 5,
+   "entropy": 15.51,
+   "crack": "Instantly / Seconds (Compromised by online or offline botnets)",
+   "isCommon": true,
+   "ok": true
+  },
+  {
+   "pw": "football",
+   "truth": "WEAK",
+   "strength": "WEAK",
+   "score": 10,
+   "entropy": 20.0,
+   "crack": "Instantly / Seconds (Compromised by online or offline botnets)",
+   "isCommon": true,
+   "ok": true
+  },
+  {
+   "pw": "admin123",
+   "truth": "WEAK",
+   "strength": "FAIR",
+   "score": 30,
+   "entropy": 24.0,
+   "crack": "A Few Days to Weeks (Vulnerable to mask and dictionary attacks)",
+   "isCommon": false,
+   "ok": true
+  },
+  {
+   "pw": "welcome1",
+   "truth": "WEAK",
+   "strength": "FAIR",
+   "score": 30,
+   "entropy": 22.0,
+   "crack": "A Few Days to Weeks (Vulnerable to mask and dictionary attacks)",
+   "isCommon": false,
+   "ok": true
+  },
+  {
+   "pw": "***strong***",
+   "truth": "STRONG",
+   "strength": "VERY_STRONG",
+   "score": 100,
+   "entropy": 82.44,
+   "crack": "Centuries / Decades (Resistant to GPU cluster brute force)",
+   "isCommon": false,
+   "ok": true
+  },
+  {
+   "pw": "***strong***",
+   "truth": "STRONG",
+   "strength": "GOOD",
+   "score": 65,
+   "entropy": 82.44,
+   "crack": "Several Months (Moderately vulnerable to dedicated hashcat rigs)",
+   "isCommon": false,
+   "ok": true
+  },
+  {
+   "pw": "***strong***",
+   "truth": "STRONG",
+   "strength": "VERY_STRONG",
+   "score": 100,
+   "entropy": 80.44,
+   "crack": "Centuries / Decades (Resistant to GPU cluster brute force)",
+   "isCommon": false,
+   "ok": true
+  },
+  {
+   "pw": "***strong***",
+   "truth": "STRONG",
+   "strength": "VERY_STRONG",
+   "score": 100,
+   "entropy": 82.44,
+   "crack": "Centuries / Decades (Resistant to GPU cluster brute force)",
+   "isCommon": false,
+   "ok": true
+  },
+  {
+   "pw": "***strong***",
+   "truth": "STRONG",
+   "strength": "VERY_STRONG",
+   "score": 100,
+   "entropy": 80.44,
+   "crack": "Centuries / Decades (Resistant to GPU cluster brute force)",
+   "isCommon": false,
+   "ok": true
+  },
+  {
+   "pw": "***strong***",
+   "truth": "STRONG",
+   "strength": "VERY_STRONG",
+   "score": 100,
+   "entropy": 77.68,
+   "crack": "Centuries / Decades (Resistant to GPU cluster brute force)",
+   "isCommon": false,
+   "ok": true
+  },
+  {
+   "pw": "***strong***",
+   "truth": "STRONG",
+   "strength": "VERY_STRONG",
+   "score": 100,
+   "entropy": 79.68,
+   "crack": "Centuries / Decades (Resistant to GPU cluster brute force)",
+   "isCommon": false,
+   "ok": true
+  },
+  {
+   "pw": "***strong***",
+   "truth": "STRONG",
+   "strength": "VERY_STRONG",
+   "score": 85,
+   "entropy": 80.44,
+   "crack": "Centuries / Decades (Resistant to GPU cluster brute force)",
+   "isCommon": false,
+   "ok": true
+  },
+  {
+   "pw": "***strong***",
+   "truth": "STRONG",
+   "strength": "VERY_STRONG",
+   "score": 85,
+   "entropy": 75.68,
+   "crack": "Centuries / Decades (Resistant to GPU cluster brute force)",
+   "isCommon": false,
+   "ok": true
+  },
+  {
+   "pw": "***strong***",
+   "truth": "STRONG",
+   "strength": "VERY_STRONG",
+   "score": 100,
+   "entropy": 78.44,
+   "crack": "Centuries / Decades (Resistant to GPU cluster brute force)",
+   "isCommon": false,
+   "ok": true
+  }
+ ],
+ "chat": [
+  {
+   "status": 200,
+   "category": "SCAM",
+   "reply_len": 301,
+   "reply": "Golden Rule: Never share your OTP (One-Time Password) with ANYONE \u2014 not even someone claiming to be bank staff, police, or tech support.\n\nReal banks and customer service agents will NEVER call or message asking for your OTP. OTPs are meant exclusively for authorising actions you personally initiated."
+  }
+ ]
+}
