@@ -1,5 +1,6 @@
 package com.gillnet.model;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import org.springframework.data.annotation.Id;
@@ -20,6 +21,7 @@ public class User {
     private String authProvider; // "LOCAL" or "GOOGLE"
     private LocalDateTime createdAt;
     private Integer credits; // usage credits; null = never initialized (granted lazily)
+    private LocalDate lastDailyCreditGrant; // last UTC date the daily grant was applied; null = never
 
     public User() {
     }
@@ -93,5 +95,13 @@ public class User {
 
     public void setCredits(Integer credits) {
         this.credits = credits;
+    }
+
+    public LocalDate getLastDailyCreditGrant() {
+        return lastDailyCreditGrant;
+    }
+
+    public void setLastDailyCreditGrant(LocalDate lastDailyCreditGrant) {
+        this.lastDailyCreditGrant = lastDailyCreditGrant;
     }
 }

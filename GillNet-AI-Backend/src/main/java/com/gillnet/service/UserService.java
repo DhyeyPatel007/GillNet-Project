@@ -40,6 +40,7 @@ public class UserService {
     private final GoogleTokenVerifier googleTokenVerifier;
     private final JwtUtils jwtUtils;
     private final int signupCreditBonus;
+    private final int dailyCreditGrant;
     private final ObjectMapper objectMapper;
     private final String resolvedMongoUri;
     private final MongoProperties mongoProperties;
@@ -54,6 +55,7 @@ public class UserService {
                        GoogleTokenVerifier googleTokenVerifier,
                        JwtUtils jwtUtils,
                        @org.springframework.beans.factory.annotation.Value("${app.credits.signup-bonus:100}") int signupCreditBonus,
+                       @org.springframework.beans.factory.annotation.Value("${app.credits.daily-grant:50}") int dailyCreditGrant,
                        @org.springframework.beans.factory.annotation.Value("${spring.mongodb.uri:}") String resolvedMongoUri,
                        MongoProperties mongoProperties,
                        MongoClient mongoClient) {
@@ -62,6 +64,7 @@ public class UserService {
         this.googleTokenVerifier = googleTokenVerifier;
         this.jwtUtils = jwtUtils;
         this.signupCreditBonus = signupCreditBonus;
+        this.dailyCreditGrant = dailyCreditGrant;
         this.resolvedMongoUri = resolvedMongoUri == null ? "" : resolvedMongoUri;
         this.mongoProperties = mongoProperties;
         this.mongoClient = mongoClient;
@@ -311,7 +314,7 @@ public class UserService {
         if (email == null) {
             return Optional.empty();
         }
-        return findByEmail(email);
+        return findByEmail(email).map(this::ensureCreditsInitialized);
     }
 
     /**
@@ -330,11 +333,32 @@ public class UserService {
      * Ensure a user loaded from storage has a credit balance. Users created
      * before the credits system have no credits field — they receive the
      * signup bonus once, the first time their profile is read.
+     * <p>
+     * Also applies the daily credit grant: once per UTC day, an active user
+     * receives {@code dailyCreditGrant} bonus credits on top of their balance.
+     * Idempotent — safe to call on every authenticated request.
      */
-    public User ensureCreditsInitialized(User user) {
-        if (user != null && user.getCredits() == null) {
-            getCredits(user); // lazy grant + persist
+    public synchronized User ensureCreditsInitialized(User user) {
+        if (user == null) {
+            return null;
+        }
+        boolean changed = false;
+        if (user.getCredits() == null) {
+            user.setCredits(signupCreditBonus);
+            changed = true;
             log.info("Granted {} signup credits to legacy user {}", signupCreditBonus, user.getEmail());
+        }
+        java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneOffset.UTC);
+        if (dailyCreditGrant > 0
+                && (user.getLastDailyCreditGrant() == null || user.getLastDailyCreditGrant().isBefore(today))) {
+            user.setCredits(user.getCredits() + dailyCreditGrant);
+            user.setLastDailyCreditGrant(today);
+            changed = true;
+            log.info("Granted {} daily credits to user {} (new balance {})",
+                    dailyCreditGrant, user.getEmail(), user.getCredits());
+        }
+        if (changed) {
+            saveUser(user);
         }
         return user;
     }
