@@ -25,7 +25,8 @@ import com.gillnet.model.User;
 import com.gillnet.repository.UserRepository;
 import com.gillnet.security.GoogleTokenVerifier;
 import com.gillnet.security.JwtUtils;
-
+import com.mongodb.client.MongoClient;
+import org.springframework.boot.autoconfigure.mongo.MongoProperties;
 import jakarta.annotation.PostConstruct;
 
 @Service
@@ -41,6 +42,8 @@ public class UserService {
     private final int signupCreditBonus;
     private final ObjectMapper objectMapper;
     private final String resolvedMongoUri;
+    private final MongoProperties mongoProperties;
+    private final MongoClient mongoClient;
 
     // Instant-access store
     private final Map<String, User> inMemoryUsers = new ConcurrentHashMap<>();
@@ -51,13 +54,17 @@ public class UserService {
                        GoogleTokenVerifier googleTokenVerifier,
                        JwtUtils jwtUtils,
                        @org.springframework.beans.factory.annotation.Value("${app.credits.signup-bonus:100}") int signupCreditBonus,
-                       @org.springframework.beans.factory.annotation.Value("${spring.data.mongodb.uri:}") String resolvedMongoUri) {
+                       @org.springframework.beans.factory.annotation.Value("${spring.data.mongodb.uri:}") String resolvedMongoUri,
+                       MongoProperties mongoProperties,
+                       MongoClient mongoClient) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.googleTokenVerifier = googleTokenVerifier;
         this.jwtUtils = jwtUtils;
         this.signupCreditBonus = signupCreditBonus;
         this.resolvedMongoUri = resolvedMongoUri == null ? "" : resolvedMongoUri;
+        this.mongoProperties = mongoProperties;
+        this.mongoClient = mongoClient;
         this.objectMapper = new ObjectMapper();
         this.objectMapper.registerModule(new JavaTimeModule());
     }
@@ -71,6 +78,22 @@ public class UserService {
         // Never log credentials: keep only scheme + host.
         String maskedUri = resolvedMongoUri.replaceAll("://[^@]*@", "://***@");
         log.info("MONGO DIAG — resolved spring.data.mongodb.uri: {}", maskedUri.isEmpty() ? "<empty>" : maskedUri);
+        // What do Spring Boot's MongoProperties and the actual driver client see?
+        // (No credentials: hosts never contain userinfo.)
+        try {
+            String propsUri = mongoProperties.getUri();
+            String maskedProps = propsUri == null ? "<null>"
+                    : propsUri.replaceAll("://[^@]*@", "://***@");
+            log.info("MONGO DIAG — MongoProperties.uri: {}", maskedProps.isEmpty() ? "<empty>" : maskedProps);
+        } catch (Exception e) {
+            log.info("MONGO DIAG — MongoProperties unreadable: {}", e.toString());
+        }
+        try {
+            log.info("MONGO DIAG — MongoClient hosts: {}",
+                    mongoClient.getClusterDescription().getClusterSettings().getHosts());
+        } catch (Exception e) {
+            log.info("MONGO DIAG — MongoClient hosts unreadable: {}", e.toString());
+        }
 
         // 1. Load users from durable file storage if present
         loadUsersFromFile();
