@@ -10,6 +10,7 @@ public class PhishingScanDto {
         private String content; // Text content or Base64 data URL
         private String fileName;
         private String userId;
+        private String extractedText; // OCR-extracted on-screen text (IMAGE scans)
 
         public Request() {}
 
@@ -28,6 +29,8 @@ public class PhishingScanDto {
         public void setFileName(String fileName) { this.fileName = fileName; }
         public String getUserId() { return userId; }
         public void setUserId(String userId) { this.userId = userId; }
+        public String getExtractedText() { return extractedText; }
+        public void setExtractedText(String extractedText) { this.extractedText = extractedText; }
     }
 
     public static class Response {

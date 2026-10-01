@@ -36,6 +36,7 @@ import {
   Coins,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ChatAssistant from "@/components/ChatAssistant";
 import globeImage from "@/assets/security-globe.png";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -1505,6 +1506,7 @@ function DashboardPage() {
           </div>
         </div>
       </main>
+      <ChatAssistant />
     </div>
   );
 }
