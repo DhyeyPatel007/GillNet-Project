@@ -113,11 +113,21 @@ public class AutopsyService {
 
         // Findings summary (no overall verdict — like real forensics tools, the
         // report presents evidence and the analyst concludes).
+        // Forensic corroboration rule: a single weak signal is not a threat on
+        // its own. A shortened/ambiguous link (risk 40) or text that merely
+        // *mentions* phishing tactics (low-score PHISHING) only becomes a
+        // threat when corroborated — suspicious link + suspicious text together,
+        // or a high-confidence text score on its own.
+        boolean suspiciousLink = res.getUrlFindings().stream().anyMatch(f -> f.getRiskScore() >= 40);
         int threats = (int) res.getUrlFindings().stream()
                 .filter(f -> "PHISHING".equals(f.getVerdict())).count();
-        if ("PHISHING".equals(res.getTextVerdict())) threats++;
+        String tv = res.getTextVerdict();
+        int ts = res.getTextRiskScore() != null ? res.getTextRiskScore() : 0;
+        if (ts >= 70 || (("SUSPICIOUS".equals(tv) || "PHISHING".equals(tv)) && suspiciousLink)) {
+            threats++;
+        }
         res.setThreatsFound(threats);
-        res.setArtifactsExamined(res.getUrlsExtracted() + (res.getTextVerdict() != null ? 1 : 0));
+        res.setArtifactsExamined(res.getUrlsExtracted() + (tv != null ? 1 : 0));
         return res;
     }
 
