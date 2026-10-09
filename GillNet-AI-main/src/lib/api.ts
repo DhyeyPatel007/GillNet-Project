@@ -70,6 +70,59 @@ export interface PasswordScanResult {
   isCommon: boolean;
 }
 
+export interface AutopsyUrlFinding {
+  url: string;
+  verdict: "SAFE" | "SUSPICIOUS" | "PHISHING" | string;
+  riskScore: number;
+  reasons: string[];
+}
+
+export interface AutopsyResult {
+  fileName: string;
+  fileSizeHuman: string;
+  mimeType: string;
+  md5: string;
+  sha256: string;
+  overallVerdict: "SAFE" | "SUSPICIOUS" | "PHISHING" | string;
+  riskScore: number;
+  urlFindings: AutopsyUrlFinding[];
+  urlsExtracted: number;
+  textVerdict?: string;
+  textRiskScore?: number;
+  textSummary?: string;
+  textIndicators: string[];
+  notes: string[];
+  analyzedAt: string;
+}
+
+function normalizeAutopsy(r: any): AutopsyResult {
+  const asList = (v: any): string[] => (Array.isArray(v) ? v.filter((x) => typeof x === "string") : []);
+  return {
+    fileName: typeof r.fileName === "string" ? r.fileName : "unknown",
+    fileSizeHuman: typeof r.fileSizeHuman === "string" ? r.fileSizeHuman : "",
+    mimeType: typeof r.mimeType === "string" ? r.mimeType : "",
+    md5: typeof r.md5 === "string" ? r.md5 : "",
+    sha256: typeof r.sha256 === "string" ? r.sha256 : "",
+    overallVerdict: typeof r.overallVerdict === "string" ? r.overallVerdict : "SAFE",
+    riskScore: typeof r.riskScore === "number" ? r.riskScore : 0,
+    urlFindings: Array.isArray(r.urlFindings)
+      ? r.urlFindings.map((f: any) => ({
+          url: typeof f.url === "string" ? f.url : "",
+          verdict: typeof f.verdict === "string" ? f.verdict : "SAFE",
+          riskScore: typeof f.riskScore === "number" ? f.riskScore : 0,
+          reasons: asList(f.reasons),
+        }))
+      : [],
+    urlsExtracted: typeof r.urlsExtracted === "number" ? r.urlsExtracted : 0,
+    textVerdict: typeof r.textVerdict === "string" ? r.textVerdict : undefined,
+    textRiskScore: typeof r.textRiskScore === "number" ? r.textRiskScore : undefined,
+    textSummary: typeof r.textSummary === "string" ? r.textSummary : undefined,
+    textIndicators: asList(r.textIndicators),
+    notes: asList(r.notes),
+    analyzedAt: typeof r.analyzedAt === "string" ? r.analyzedAt : "",
+  };
+}
+
 export interface PhishingScanResult {
   threatLevel: "SAFE" | "SUSPICIOUS" | "PHISHING" | string;
   riskScore: number;
@@ -1159,6 +1212,48 @@ export const api = {
           features: { length: password.length, entropy: res.entropy, strength: res.strength },
         }).catch(() => {});
         return res;
+      }
+    },
+  },
+
+  autopsy: {
+    // File upload uses multipart FormData, so it bypasses the JSON `request`
+    // helper (which forces Content-Type: application/json).
+    analyze: async (file: File, userId?: string): Promise<AutopsyResult> => {
+      const form = new FormData();
+      form.append("file", file);
+      if (userId) form.append("userId", userId);
+      const controller = new AbortController();
+      // Upload + multi-engine analysis can take a while on cold starts.
+      const timeoutId = setTimeout(() => controller.abort(), 90000);
+      try {
+        const res = await fetch(`${getApiBaseUrl()}/api/autopsy/analyze`, {
+          method: "POST",
+          headers: { ...getAuthHeader() },
+          body: form,
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (!res.ok) {
+          let errorMessage = `Request failed (${res.status})`;
+          try {
+            const errorJson = await res.json();
+            errorMessage = errorJson.message || errorJson.error || JSON.stringify(errorJson);
+          } catch {
+            try {
+              const errorText = await res.text();
+              if (errorText) errorMessage = errorText;
+            } catch {}
+          }
+          throw new Error(errorMessage);
+        }
+        return normalizeAutopsy(await res.json());
+      } catch (err: any) {
+        clearTimeout(timeoutId);
+        if (err?.name === "AbortError") {
+          throw new Error("Analysis timed out — the server may be cold-starting. Try again in a minute.");
+        }
+        throw err;
       }
     },
   },

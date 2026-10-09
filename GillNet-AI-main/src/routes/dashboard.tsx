@@ -35,6 +35,8 @@ import {
   ArrowUpRight,
   Coins,
   Loader2,
+  Fingerprint,
+  Hash,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChatAssistant from "@/components/ChatAssistant";
@@ -45,6 +47,7 @@ import {
   type UrlScanResult,
   type PhishingScanResult,
   type PasswordScanResult,
+  type AutopsyResult,
   type ScanRecord,
   type HistoryStats,
 } from "@/lib/api";
@@ -135,6 +138,16 @@ function DashboardPage() {
   const [passwordInput, setPasswordInput] = useState("");
   const [checkingPassword, setCheckingPassword] = useState(false);
   const [passwordResult, setPasswordResult] = useState<PasswordScanResult | null>(null);
+
+  // 4. Autopsy (file forensics) state
+  const [autopsyFile, setAutopsyFile] = useState<File | null>(null);
+  const [autopsyFileName, setAutopsyFileName] = useState("");
+  const [autopsyFileSize, setAutopsyFileSize] = useState("");
+  const [autopsyResult, setAutopsyResult] = useState<AutopsyResult | null>(null);
+  const [autopsyScanning, setAutopsyScanning] = useState(false);
+  const [autopsyError, setAutopsyError] = useState<string | null>(null);
+  const [hashCopied, setHashCopied] = useState<string | null>(null);
+  const autopsyInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch stats and history
   const refreshData = useCallback(async () => {
@@ -299,6 +312,60 @@ function DashboardPage() {
     }
   };
 
+  // 4. Autopsy (file forensics) handlers
+  const handleAutopsyFileSelect = (file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
+      setAutopsyError("File too large — 10 MB max.");
+      return;
+    }
+    setAutopsyError(null);
+    setAutopsyResult(null);
+    setAutopsyFile(file);
+    setAutopsyFileName(file.name);
+    setAutopsyFileSize(
+      file.size < 1024 ? `${file.size} B` : `${Math.round(file.size / 1024)} KB`
+    );
+  };
+
+  const removeAutopsyFile = () => {
+    setAutopsyFile(null);
+    setAutopsyFileName("");
+    setAutopsyFileSize("");
+    setAutopsyResult(null);
+    setAutopsyError(null);
+    if (autopsyInputRef.current) autopsyInputRef.current.value = "";
+  };
+
+  const handleAutopsyAnalyze = async () => {
+    if (!autopsyFile) {
+      setAutopsyError("Choose a file to autopsy first.");
+      return;
+    }
+    setAutopsyError(null);
+    setAutopsyResult(null);
+    setAutopsyScanning(true);
+    try {
+      const res = await api.autopsy.analyze(autopsyFile, user?.id);
+      setAutopsyResult(res);
+      refreshData();
+      refreshUser();
+    } catch (err: any) {
+      setAutopsyError(err.message || "Autopsy analysis failed. Check backend connection.");
+    } finally {
+      setAutopsyScanning(false);
+    }
+  };
+
+  const copyHash = async (label: string, value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setHashCopied(label);
+      setTimeout(() => setHashCopied(null), 1500);
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
+
   const displayName = user?.name || (user?.email ? user.email.split("@")[0] : "Analyst");
   const userInitial = displayName.charAt(0).toUpperCase();
 
@@ -307,6 +374,7 @@ function DashboardPage() {
     { label: "Link Scan", href: "#scan" },
     { label: "Phishing Scan", href: "#phishing" },
     { label: "Password Check", href: "#password" },
+    { label: "Autopsy", href: "#autopsy" },
     { label: "Recent Activity", href: "#history" },
     { label: "Security Intel", href: "#security" },
   ];
@@ -658,7 +726,7 @@ function DashboardPage() {
                 <PanelTitle
                   icon={<Link2 />}
                   title="Link Scanner"
-                  subtitle="Verify domain authenticity, SSL encryption, and structural features via retrained Random Forest ML model."
+                  subtitle="Verify domain authenticity, SSL encryption, and structural features via heuristic rule engine."
                 />
 
                 <div className="mt-3">
@@ -1367,7 +1435,282 @@ function DashboardPage() {
                 )}
               </section>
 
-              {/* 4. SECURITY OVERVIEW */}
+              {/* 4. AUTOPSY — FILE FORENSICS PANEL */}
+              <section id="autopsy" className="rounded-[25px] border border-frame bg-shell/40 px-[24px] py-[18px]">
+                <PanelTitle
+                  icon={<Fingerprint />}
+                  title="Autopsy — File Forensics"
+                  subtitle="Post-mortem file analysis: cryptographic hashing, metadata extraction, and embedded threat inspection."
+                />
+
+                <div className="mt-4 space-y-3">
+                  <input
+                    ref={autopsyInputRef}
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        handleAutopsyFileSelect(e.target.files[0]);
+                      }
+                    }}
+                  />
+
+                  {autopsyFile ? (
+                    <div className="flex flex-col sm:flex-row items-center gap-4 rounded-2xl border border-frame bg-surface p-3.5">
+                      <div className="grid size-14 shrink-0 place-items-center rounded-xl border border-frame bg-background">
+                        <FileText className="size-6 text-foreground/70" />
+                      </div>
+                      <div className="min-w-0 flex-1 space-y-1 text-center sm:text-left">
+                        <p className="font-medium text-sm text-bright truncate">{autopsyFileName}</p>
+                        <p className="text-xs text-muted-foreground">Size: {autopsyFileSize} · max 10 MB</p>
+                        <p className="text-xs text-safe flex items-center justify-center sm:justify-start gap-1">
+                          <CheckCircle2 className="size-3.5" /> Ready for forensic autopsy
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={autopsyScanning}
+                          onClick={removeAutopsyFile}
+                          className="gap-1 rounded-xl text-xs cursor-pointer"
+                        >
+                          <Trash2 className="size-3.5" /> Remove
+                        </Button>
+                        <Button
+                          size="sm"
+                          disabled={autopsyScanning}
+                          onClick={handleAutopsyAnalyze}
+                          className="rounded-xl bg-primary text-primary-foreground text-xs cursor-pointer"
+                        >
+                          {autopsyScanning ? (
+                            <span className="flex items-center gap-1.5">
+                              <Loader2 className="size-3.5 animate-spin" />
+                              <span>Running autopsy...</span>
+                            </span>
+                          ) : (
+                            "Run Autopsy"
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                          handleAutopsyFileSelect(e.dataTransfer.files[0]);
+                        }
+                      }}
+                      onClick={() => autopsyInputRef.current?.click()}
+                      className="group flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-frame/70 bg-surface/40 p-6 text-center hover:border-primary/60 hover:bg-surface transition-all cursor-pointer"
+                    >
+                      <div className="grid size-12 place-items-center rounded-full border border-frame bg-background group-hover:scale-105 transition-transform">
+                        <UploadCloud className="size-6 text-foreground/70" />
+                      </div>
+                      <p className="mt-3 text-sm font-semibold text-bright">
+                        Drop a suspicious file here, or click to browse
+                      </p>
+                      <p className="mt-1 max-w-[420px] text-xs text-muted-foreground">
+                        Email attachments, HTML files, documents — anything you want forensically examined.
+                        Hashes, metadata, hidden URLs and text are extracted and threat-scored.
+                      </p>
+                    </div>
+                  )}
+
+                  {autopsyError && (
+                    <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 p-2.5 text-xs text-destructive font-sans">
+                      <AlertCircle className="size-4 shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="font-semibold">Autopsy Error</p>
+                        <p className="mt-0.5">{autopsyError}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {autopsyResult && (
+                    <div className="rounded-2xl border-2 border-frame bg-surface p-4 space-y-4 animate-fadeIn shadow-md">
+                      {/* Verdict header */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-frame/40 pb-3">
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
+                              autopsyResult.overallVerdict === "PHISHING"
+                                ? "bg-destructive text-white"
+                                : autopsyResult.overallVerdict === "SUSPICIOUS"
+                                ? "bg-warning text-black"
+                                : "bg-safe text-black"
+                            }`}
+                          >
+                            {autopsyResult.overallVerdict === "PHISHING" ? (
+                              <AlertTriangle className="size-3.5" />
+                            ) : autopsyResult.overallVerdict === "SUSPICIOUS" ? (
+                              <AlertCircle className="size-3.5" />
+                            ) : (
+                              <CheckCircle2 className="size-3.5" />
+                            )}
+                            {autopsyResult.overallVerdict}
+                          </span>
+                          <span className="text-xs text-muted-foreground font-sans">
+                            Forensic verdict · {autopsyResult.fileName}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground font-sans">Risk</span>
+                          <div className="h-2 w-28 overflow-hidden rounded-full bg-frame/40">
+                            <div
+                              className={`h-full rounded-full ${
+                                autopsyResult.riskScore >= 70
+                                  ? "bg-destructive"
+                                  : autopsyResult.riskScore >= 40
+                                  ? "bg-warning"
+                                  : "bg-safe"
+                              }`}
+                              style={{ width: `${autopsyResult.riskScore}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-bold tabular-nums">{autopsyResult.riskScore}/100</span>
+                        </div>
+                      </div>
+
+                      {/* File identity: hashes + metadata */}
+                      <div>
+                        <p className="flex items-center gap-1.5 text-xs font-semibold text-bright mb-2">
+                          <Hash className="size-3.5" /> File Identity
+                        </p>
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 text-xs font-sans">
+                          <div className="rounded-xl border border-frame/60 bg-background px-3 py-2">
+                            <p className="text-muted-foreground">Size</p>
+                            <p className="font-semibold text-bright">{autopsyResult.fileSizeHuman}</p>
+                          </div>
+                          <div className="rounded-xl border border-frame/60 bg-background px-3 py-2">
+                            <p className="text-muted-foreground">Type</p>
+                            <p className="font-semibold text-bright truncate">{autopsyResult.mimeType}</p>
+                          </div>
+                          {(
+                            [
+                              ["MD5", autopsyResult.md5],
+                              ["SHA-256", autopsyResult.sha256],
+                            ] as const
+                          ).map(([label, value]) => (
+                            <div
+                              key={label}
+                              className="rounded-xl border border-frame/60 bg-background px-3 py-2 sm:col-span-2"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-muted-foreground">{label}</p>
+                                <button
+                                  onClick={() => copyHash(label, value)}
+                                  className="flex items-center gap-1 text-muted-foreground hover:text-bright transition-colors cursor-pointer"
+                                  title="Copy hash"
+                                >
+                                  {hashCopied === label ? (
+                                    <Check className="size-3.5 text-safe" />
+                                  ) : (
+                                    <Copy className="size-3.5" />
+                                  )}
+                                  <span className="text-[10px]">{hashCopied === label ? "Copied" : "Copy"}</span>
+                                </button>
+                              </div>
+                              <p className="mt-0.5 break-all font-mono text-[11px] text-bright">{value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Embedded URLs */}
+                      <div>
+                        <p className="flex items-center gap-1.5 text-xs font-semibold text-bright mb-2">
+                          <Link2 className="size-3.5" /> Embedded URLs ({autopsyResult.urlsExtracted} found)
+                        </p>
+                        {autopsyResult.urlFindings.length > 0 ? (
+                          <ul className="space-y-2">
+                            {autopsyResult.urlFindings.map((f, i) => (
+                              <li
+                                key={i}
+                                className="rounded-xl border border-frame/60 bg-background px-3 py-2 text-xs font-sans"
+                              >
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span
+                                    className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                      f.verdict === "PHISHING"
+                                        ? "bg-destructive/15 text-destructive"
+                                        : f.verdict === "SUSPICIOUS"
+                                        ? "bg-warning/15 text-warning"
+                                        : "bg-safe/15 text-safe"
+                                    }`}
+                                  >
+                                    {f.verdict} · {f.riskScore}
+                                  </span>
+                                  <span className="break-all text-bright">{f.url}</span>
+                                </div>
+                                {f.reasons.length > 0 && (
+                                  <p className="mt-1 text-muted-foreground">{f.reasons.join(" ")}</p>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-xs text-muted-foreground font-sans">No URLs extracted from this file.</p>
+                        )}
+                      </div>
+
+                      {/* Extracted text analysis */}
+                      {autopsyResult.textVerdict && (
+                        <div>
+                          <p className="flex items-center gap-1.5 text-xs font-semibold text-bright mb-2">
+                            <FileText className="size-3.5" /> Extracted Text Analysis
+                            <span
+                              className={`ml-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                autopsyResult.textVerdict === "PHISHING"
+                                  ? "bg-destructive/15 text-destructive"
+                                  : autopsyResult.textVerdict === "SUSPICIOUS"
+                                  ? "bg-warning/15 text-warning"
+                                  : "bg-safe/15 text-safe"
+                              }`}
+                            >
+                              {autopsyResult.textVerdict} · {autopsyResult.textRiskScore}
+                            </span>
+                          </p>
+                          {autopsyResult.textSummary && (
+                            <p className="text-xs text-muted-foreground font-sans">{autopsyResult.textSummary}</p>
+                          )}
+                          {autopsyResult.textIndicators.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {autopsyResult.textIndicators.map((ind, i) => (
+                                <span
+                                  key={i}
+                                  className="rounded-full border border-frame/60 bg-background px-2 py-0.5 text-[10px] font-sans text-foreground/80"
+                                >
+                                  {ind}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Notes */}
+                      {autopsyResult.notes.length > 0 && (
+                        <div className="rounded-xl border border-frame/40 bg-background/60 px-3 py-2">
+                          <ul className="space-y-1 text-[11px] text-muted-foreground font-sans">
+                            {autopsyResult.notes.map((n, i) => (
+                              <li key={i} className="flex items-start gap-1.5">
+                                <Lightbulb className="size-3.5 shrink-0 mt-px" />
+                                <span>{n}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </section>
+
+              {/* 5. SECURITY OVERVIEW */}
               <section id="security" className="rounded-[25px] border border-frame bg-shell/40 px-[24px] py-[18px]">
                 <PanelTitle
                   icon={<Shield />}
