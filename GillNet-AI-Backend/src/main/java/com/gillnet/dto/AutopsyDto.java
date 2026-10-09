@@ -35,8 +35,8 @@ public class AutopsyDto {
         private String mimeType;
         private String md5;
         private String sha256;
-        private String overallVerdict; // SAFE / SUSPICIOUS / PHISHING
-        private Integer riskScore;     // 0 - 100 (max across findings)
+        private int artifactsExamined;
+        private int threatsFound;
         private List<UrlFinding> urlFindings = new ArrayList<>();
         private int urlsExtracted;
         private String textVerdict;    // null when text analysis skipped
@@ -60,10 +60,10 @@ public class AutopsyDto {
         public void setMd5(String md5) { this.md5 = md5; }
         public String getSha256() { return sha256; }
         public void setSha256(String sha256) { this.sha256 = sha256; }
-        public String getOverallVerdict() { return overallVerdict; }
-        public void setOverallVerdict(String overallVerdict) { this.overallVerdict = overallVerdict; }
-        public Integer getRiskScore() { return riskScore; }
-        public void setRiskScore(Integer riskScore) { this.riskScore = riskScore; }
+        public int getArtifactsExamined() { return artifactsExamined; }
+        public void setArtifactsExamined(int artifactsExamined) { this.artifactsExamined = artifactsExamined; }
+        public int getThreatsFound() { return threatsFound; }
+        public void setThreatsFound(int threatsFound) { this.threatsFound = threatsFound; }
         public List<UrlFinding> getUrlFindings() { return urlFindings; }
         public void setUrlFindings(List<UrlFinding> urlFindings) { this.urlFindings = urlFindings; }
         public int getUrlsExtracted() { return urlsExtracted; }

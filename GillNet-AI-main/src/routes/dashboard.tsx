@@ -1532,46 +1532,28 @@ function DashboardPage() {
 
                   {autopsyResult && (
                     <div className="rounded-2xl border-2 border-frame bg-surface p-4 space-y-4 animate-fadeIn shadow-md">
-                      {/* Verdict header */}
+                      {/* Report header: findings summary (no overall verdict — the analyst concludes) */}
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-frame/40 pb-3">
                         <div className="flex items-center gap-2.5">
+                          <Fingerprint className="size-5 text-foreground/70 shrink-0" />
+                          <div>
+                            <p className="text-sm font-bold text-bright">Forensic Report</p>
+                            <p className="text-xs text-muted-foreground font-sans truncate max-w-[280px] sm:max-w-none">
+                              {autopsyResult.fileName}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs font-sans">
+                          <span className="text-muted-foreground">
+                            {autopsyResult.artifactsExamined} artifact{autopsyResult.artifactsExamined === 1 ? "" : "s"} examined
+                          </span>
                           <span
-                            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${
-                              autopsyResult.overallVerdict === "PHISHING"
-                                ? "bg-destructive text-white"
-                                : autopsyResult.overallVerdict === "SUSPICIOUS"
-                                ? "bg-warning text-black"
-                                : "bg-safe text-black"
+                            className={`font-bold ${
+                              autopsyResult.threatsFound > 0 ? "text-destructive" : "text-safe"
                             }`}
                           >
-                            {autopsyResult.overallVerdict === "PHISHING" ? (
-                              <AlertTriangle className="size-3.5" />
-                            ) : autopsyResult.overallVerdict === "SUSPICIOUS" ? (
-                              <AlertCircle className="size-3.5" />
-                            ) : (
-                              <CheckCircle2 className="size-3.5" />
-                            )}
-                            {autopsyResult.overallVerdict}
+                            {autopsyResult.threatsFound} threat{autopsyResult.threatsFound === 1 ? "" : "s"} found
                           </span>
-                          <span className="text-xs text-muted-foreground font-sans">
-                            Forensic verdict · {autopsyResult.fileName}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground font-sans">Risk</span>
-                          <div className="h-2 w-28 overflow-hidden rounded-full bg-frame/40">
-                            <div
-                              className={`h-full rounded-full ${
-                                autopsyResult.riskScore >= 70
-                                  ? "bg-destructive"
-                                  : autopsyResult.riskScore >= 40
-                                  ? "bg-warning"
-                                  : "bg-safe"
-                              }`}
-                              style={{ width: `${autopsyResult.riskScore}%` }}
-                            />
-                          </div>
-                          <span className="text-xs font-bold tabular-nums">{autopsyResult.riskScore}/100</span>
                         </div>
                       </div>
 

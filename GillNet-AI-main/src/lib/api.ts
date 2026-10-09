@@ -83,8 +83,8 @@ export interface AutopsyResult {
   mimeType: string;
   md5: string;
   sha256: string;
-  overallVerdict: "SAFE" | "SUSPICIOUS" | "PHISHING" | string;
-  riskScore: number;
+  artifactsExamined: number;
+  threatsFound: number;
   urlFindings: AutopsyUrlFinding[];
   urlsExtracted: number;
   textVerdict?: string;
@@ -103,8 +103,8 @@ function normalizeAutopsy(r: any): AutopsyResult {
     mimeType: typeof r.mimeType === "string" ? r.mimeType : "",
     md5: typeof r.md5 === "string" ? r.md5 : "",
     sha256: typeof r.sha256 === "string" ? r.sha256 : "",
-    overallVerdict: typeof r.overallVerdict === "string" ? r.overallVerdict : "SAFE",
-    riskScore: typeof r.riskScore === "number" ? r.riskScore : 0,
+    artifactsExamined: typeof r.artifactsExamined === "number" ? r.artifactsExamined : 0,
+    threatsFound: typeof r.threatsFound === "number" ? r.threatsFound : 0,
     urlFindings: Array.isArray(r.urlFindings)
       ? r.urlFindings.map((f: any) => ({
           url: typeof f.url === "string" ? f.url : "",
