@@ -99,13 +99,31 @@ public class AutopsyService {
             String sample = text.length() > MAX_TEXT_CHARS ? text.substring(0, MAX_TEXT_CHARS) : text;
             try {
                 PhishingScanDto.Response t = phishingScanService.analyzeTextPhishing(sample, userId);
+                int textRisk = t.getRiskScore() != null ? t.getRiskScore() : 0;
                 res.setTextVerdict(t.getThreatLevel());
-                res.setTextRiskScore(t.getRiskScore() != null ? t.getRiskScore() : 0);
+                res.setTextRiskScore(textRisk);
                 res.setTextSummary(t.getSummary());
                 if (t.getIndicators() != null) {
                     res.setTextIndicators(t.getIndicators().stream().limit(6).toList());
                 }
-                maxRisk = Math.max(maxRisk, res.getTextRiskScore());
+                // Corroboration rule for the overall file verdict: the text engine's
+                // word model is tuned for short SMS, so on a long document a purely
+                // statistical vocabulary resemblance (no malicious URLs, no credential
+                // harvesting, no pressure tactics, no brand impersonation) is a weak
+                // signal. Note it honestly, but don't let it drive the verdict alone.
+                boolean corroborated =
+                        t.isCredentialHarvesting()
+                        || (t.getUrgencyTactics() != null && !t.getUrgencyTactics().isEmpty())
+                        || (t.getBrandImpersonated() != null && !t.getBrandImpersonated().isBlank()
+                            && !"None Detected".equalsIgnoreCase(t.getBrandImpersonated().trim()))
+                        || res.getUrlFindings().stream().anyMatch(f -> f.getRiskScore() >= 40);
+                int textContribution = corroborated ? textRisk : Math.min(textRisk, 25);
+                if (!corroborated && textRisk > 25) {
+                    res.getNotes().add("Text shows only statistical spam-vocabulary resemblance "
+                            + "(no malicious URLs, credential harvesting, or pressure tactics) — "
+                            + "treated as a weak signal for the overall verdict.");
+                }
+                maxRisk = Math.max(maxRisk, textContribution);
             } catch (Exception e) {
                 res.getNotes().add("Text analysis failed: " + e.getMessage());
             }
