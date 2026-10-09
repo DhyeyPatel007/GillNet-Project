@@ -37,6 +37,8 @@ import {
   Loader2,
   Fingerprint,
   Hash,
+  FlaskConical,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ChatAssistant from "@/components/ChatAssistant";
@@ -146,6 +148,7 @@ function DashboardPage() {
   const [autopsyResult, setAutopsyResult] = useState<AutopsyResult | null>(null);
   const [autopsyScanning, setAutopsyScanning] = useState(false);
   const [autopsyError, setAutopsyError] = useState<string | null>(null);
+  const [autopsyStep, setAutopsyStep] = useState(0);
   const [hashCopied, setHashCopied] = useState<string | null>(null);
   const autopsyInputRef = useRef<HTMLInputElement>(null);
 
@@ -336,8 +339,9 @@ function DashboardPage() {
     if (autopsyInputRef.current) autopsyInputRef.current.value = "";
   };
 
-  const handleAutopsyAnalyze = async () => {
-    if (!autopsyFile) {
+  const handleAutopsyAnalyze = async (file?: File) => {
+    const target = file ?? autopsyFile;
+    if (!target) {
       setAutopsyError("Choose a file to autopsy first.");
       return;
     }
@@ -345,7 +349,7 @@ function DashboardPage() {
     setAutopsyResult(null);
     setAutopsyScanning(true);
     try {
-      const res = await api.autopsy.analyze(autopsyFile, user?.id);
+      const res = await api.autopsy.analyze(target, user?.id);
       setAutopsyResult(res);
       refreshData();
       refreshUser();
@@ -355,6 +359,41 @@ function DashboardPage() {
       setAutopsyScanning(false);
     }
   };
+
+  // One-click demo samples for reviewers: fetch a bundled sample and run it.
+  const handleAutopsySample = async (kind: "phishing" | "clean") => {
+    if (autopsyScanning) return;
+    setAutopsyError(null);
+    setAutopsyResult(null);
+    try {
+      const name = kind === "phishing" ? "phishing-invoice.html" : "clean-receipt.html";
+      const r = await fetch(`/samples/${name}`);
+      if (!r.ok) throw new Error("Couldn't load the sample file.");
+      const file = new File([await r.blob()], name, { type: "text/html" });
+      handleAutopsyFileSelect(file);
+      await handleAutopsyAnalyze(file);
+    } catch (err: any) {
+      setAutopsyError(err.message || "Couldn't load the sample file.");
+      setAutopsyScanning(false);
+    }
+  };
+
+  // Forensic progress steps shown while the analysis runs.
+  const AUTOPSY_STEPS = [
+    "Fingerprinting file (MD5 · SHA-256)",
+    "Extracting hidden links and text",
+    "Scanning with phishing engines",
+    "Compiling forensic report",
+  ];
+  useEffect(() => {
+    if (!autopsyScanning) return;
+    setAutopsyStep(0);
+    const t = setInterval(
+      () => setAutopsyStep((s) => Math.min(s + 1, AUTOPSY_STEPS.length - 1)),
+      1400
+    );
+    return () => clearInterval(t);
+  }, [autopsyScanning]);
 
   const copyHash = async (label: string, value: string) => {
     try {
@@ -1481,7 +1520,7 @@ function DashboardPage() {
                         <Button
                           size="sm"
                           disabled={autopsyScanning}
-                          onClick={handleAutopsyAnalyze}
+                          onClick={() => handleAutopsyAnalyze()}
                           className="rounded-xl bg-primary text-primary-foreground text-xs cursor-pointer"
                         >
                           {autopsyScanning ? (
@@ -1520,6 +1559,53 @@ function DashboardPage() {
                     </div>
                   )}
 
+                  {autopsyScanning && (
+                    <div className="rounded-2xl border border-frame bg-surface/60 p-3.5 space-y-2">
+                      {AUTOPSY_STEPS.map((label, i) => (
+                        <div key={label} className="flex items-center gap-2.5 text-xs font-sans">
+                          {i < autopsyStep ? (
+                            <CheckCircle2 className="size-4 text-safe shrink-0" />
+                          ) : i === autopsyStep ? (
+                            <Loader2 className="size-4 text-primary animate-spin shrink-0" />
+                          ) : (
+                            <div className="size-4 rounded-full border border-frame shrink-0" />
+                          )}
+                          <span
+                            className={
+                              i <= autopsyStep ? "text-bright font-medium" : "text-muted-foreground"
+                            }
+                          >
+                            {label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {!autopsyFile && !autopsyResult && (
+                    <div className="flex flex-wrap items-center justify-center gap-2">
+                      <span className="text-xs text-muted-foreground font-sans">No file handy?</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={autopsyScanning}
+                        onClick={() => handleAutopsySample("phishing")}
+                        className="gap-1.5 rounded-xl text-xs cursor-pointer"
+                      >
+                        <FlaskConical className="size-3.5" /> Try a phishing sample
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={autopsyScanning}
+                        onClick={() => handleAutopsySample("clean")}
+                        className="gap-1.5 rounded-xl text-xs cursor-pointer"
+                      >
+                        <ShieldCheck className="size-3.5" /> Try a clean sample
+                      </Button>
+                    </div>
+                  )}
+
                   {autopsyError && (
                     <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 p-2.5 text-xs text-destructive font-sans">
                       <AlertCircle className="size-4 shrink-0 mt-0.5" />
@@ -1532,6 +1618,70 @@ function DashboardPage() {
 
                   {autopsyResult && (
                     <div className="rounded-2xl border-2 border-frame bg-surface p-4 space-y-4 animate-fadeIn shadow-md">
+                      {/* Plain-English summary: what the findings mean + what to do */}
+                      {(() => {
+                        const r = autopsyResult;
+                        const badUrls = r.urlFindings.filter((f) => f.verdict === "PHISHING");
+                        const susLink = r.urlFindings.some((f) => f.riskScore >= 40);
+                        const ts = r.textRiskScore ?? 0;
+                        const tv = r.textVerdict;
+                        const textThreat =
+                          ts >= 70 || ((tv === "SUSPICIOUS" || tv === "PHISHING") && susLink);
+                        const textSus = !textThreat && ts >= 40;
+                        if (r.threatsFound > 0) {
+                          return (
+                            <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 flex gap-2.5">
+                              <ShieldAlert className="size-5 text-destructive shrink-0 mt-0.5" />
+                              <div className="text-xs font-sans space-y-1">
+                                <p className="font-bold text-destructive text-sm">
+                                  This file looks dangerous.
+                                </p>
+                                <p className="text-foreground/80">
+                                  {badUrls.length > 0 && (
+                                    <>
+                                      It hides {badUrls.length} malicious link
+                                      {badUrls.length === 1 ? "" : "s"}.{" "}
+                                    </>
+                                  )}
+                                  {textThreat && <>Its message reads like a phishing attack. </>}
+                                  Do not open this file — delete it, and warn anyone else who
+                                  received it.
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        if (susLink || textSus || tv === "PHISHING") {
+                          return (
+                            <div className="rounded-xl border border-warning/40 bg-warning/10 p-3 flex gap-2.5">
+                              <AlertTriangle className="size-5 text-warning shrink-0 mt-0.5" />
+                              <div className="text-xs font-sans space-y-1">
+                                <p className="font-bold text-warning text-sm">
+                                  This file looks suspicious.
+                                </p>
+                                <p className="text-foreground/80">
+                                  Nothing is confirmed malicious, but treat it with caution —
+                                  don&apos;t enter passwords or personal details into anything
+                                  it links to.
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return (
+                          <div className="rounded-xl border border-safe/40 bg-safe/10 p-3 flex gap-2.5">
+                            <ShieldCheck className="size-5 text-safe shrink-0 mt-0.5" />
+                            <div className="text-xs font-sans space-y-1">
+                              <p className="font-bold text-safe text-sm">This file looks clean.</p>
+                              <p className="text-foreground/80">
+                                No hidden malicious links or phishing language found. Stay
+                                cautious with unexpected attachments anyway.
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
                       {/* Report header: findings summary (no overall verdict — the analyst concludes) */}
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-frame/40 pb-3">
                         <div className="flex items-center gap-2.5">
@@ -1561,6 +1711,10 @@ function DashboardPage() {
                       <div>
                         <p className="flex items-center gap-1.5 text-xs font-semibold text-bright mb-2">
                           <Hash className="size-3.5" /> File Identity
+                        </p>
+                        <p className="text-xs text-muted-foreground font-sans mb-2">
+                          Fingerprint — if this exact file ever shows up again, it will be
+                          recognized instantly.
                         </p>
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 text-xs font-sans">
                           <div className="rounded-xl border border-frame/60 bg-background px-3 py-2">
