@@ -137,4 +137,22 @@ class PhishingScanServiceTest {
         verify(historyService).addRecord(argThat(record ->
                 "PHISHING_IMAGE".equals(record.getScanType())));
     }
+
+    @Test
+    void hrSubstringInsideThreeDoesNotTriggerWorkplaceSpoof() {
+        // "three" contains "hr" as a substring; the workplace-spoof branch must
+        // only fire on the whole word "hr". The relay domain alone is not enough.
+        PhishingScanDto.Response r = scanText(
+                "Hi team, three of us will meet tomorrow. Contact help@webnotifications.net for details.");
+        assertTrue(r.getIndicators().stream().noneMatch(i -> i.contains("External Relay Abuse")),
+                "Indicators were: " + r.getIndicators());
+    }
+
+    @Test
+    void realHrWordWithRelayDomainStillTriggersWorkplaceSpoof() {
+        PhishingScanDto.Response r = scanText(
+                "HR notice: your account is suspended. Verify at help@webnotifications.net immediately.");
+        assertTrue(r.getIndicators().stream().anyMatch(i -> i.contains("External Relay Abuse")),
+                "Indicators were: " + r.getIndicators());
+    }
 }

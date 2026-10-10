@@ -22,6 +22,14 @@ public class MessageScanService {
 
     private static final Logger log = LoggerFactory.getLogger(MessageScanService.class);
 
+    /**
+     * Whole-word match. Prevents naive-substring false positives such as "pin"
+     * firing inside "shopping"/"spinning".
+     */
+    private static boolean containsWord(String text, String word) {
+        return Pattern.compile("\\b" + Pattern.quote(word) + "\\b").matcher(text).find();
+    }
+
     private final HistoryService historyService;
     private final RestClient restClient;
 
@@ -120,12 +128,15 @@ public class MessageScanService {
         }
 
         // D. Sensitive Credentials / OTP Requests
+        // (single-word keywords use whole-word matching so "pin" doesn't fire
+        // inside "shopping"/"spinning"; multi-word phrases are safe as-is)
         String[] credentialKeywords = {
             "otp", "one-time password", "verification code", "pin", "cvv",
             "password", "secret phrase", "seed phrase", "social security", "ssn"
         };
         for (String kw : credentialKeywords) {
-            if (text.contains(kw)) {
+            boolean hit = kw.contains(" ") ? text.contains(kw) : containsWord(text, kw);
+            if (hit) {
                 indicators.add("[Credential Harvesting Vector] Sensitive Authentication Secret: Explicit request for confidential authentication data ('" + kw + "'). Legitimate entities never request passwords or OTPs via text.");
                 riskScore += 35;
                 break;

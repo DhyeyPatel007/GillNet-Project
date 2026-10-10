@@ -1923,10 +1923,17 @@ zed=3.295
         return resp;
     }
 
+    /**
+     * Whole-word match. Prevents naive-substring false positives such as "hr"
+     * firing inside "three"/"through"/"chrome".
+     */
+    private static boolean containsWord(String text, String word) {
+        return Pattern.compile("\\b" + Pattern.quote(word) + "\\b").matcher(text).find();
+    }
+
     /** Core text-phishing engine: pure analysis, no history recording. */
     private PhishingScanDto.Response evaluateTextHeuristicCore(String text, String userId) {
-        String lowerText = text.toLowerCase(Locale.ENGLISH);
-        List<String> indicators = new ArrayList<>();
+        String lowerText = text.toLowerCase(Locale.ENGLISH);        List<String> indicators = new ArrayList<>();
         List<String> urgencyTactics = new ArrayList<>();
         List<String> harvestTactics = new ArrayList<>();
         List<String> extractedUrls = new ArrayList<>();
@@ -2022,7 +2029,7 @@ zed=3.295
                     riskScore += 45;
                     indicators.add("[Critical Identity Spoofing] Sender Address Disparity: Display claims '" + detectedBrand + "', but sender domain is '@" + senderDomain + "' (unauthorized third-party domain).");
                 }
-            } else if (text.contains("workplace") || text.contains("hr") || text.contains("policy") || text.contains("contoso")) {
+            } else if (lowerText.contains("workplace") || containsWord(lowerText, "hr") || lowerText.contains("policy") || lowerText.contains("contoso")) {
                 if (senderDomain.contains("webnotifications") || senderDomain.contains("mail-delivery") || senderDomain.contains("notification")) {
                     senderSpoofed = true;
                     riskScore += 45;
